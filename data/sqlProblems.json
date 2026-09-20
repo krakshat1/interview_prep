@@ -1,0 +1,164 @@
+[
+  {
+    "id": "sql-001",
+    "title": "Customers from India, signed up in 2023",
+    "topic": "SELECT / WHERE",
+    "difficulty": "Beginner",
+    "prompt": "Select all columns for customers whose country is 'India' and whose signup_date is in 2023.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date TEXT 'YYYY-MM-DD') | orders(order_id, customer_id, order_date TEXT 'YYYY-MM-DD', amount REAL, status)",
+    "expectedQuery": "SELECT * FROM customers WHERE country = 'India' AND signup_date >= '2023-01-01' AND signup_date < '2024-01-01' ORDER BY customer_id;"
+  },
+  {
+    "id": "sql-002",
+    "title": "Customer count per country",
+    "topic": "GROUP BY / Aggregation",
+    "difficulty": "Beginner",
+    "prompt": "For each country, count how many customers are from that country. Order the result alphabetically by country.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) | orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT country, COUNT(*) as customer_count FROM customers GROUP BY country ORDER BY country;"
+  },
+  {
+    "id": "sql-003",
+    "title": "Order amount for CASE-based order size",
+    "topic": "CASE",
+    "difficulty": "Beginner",
+    "prompt": "For every order, show order_id, amount, and a category column: 'small' if amount < 50, 'medium' if amount is between 50 and 200 inclusive, otherwise 'large'. Order by order_id.",
+    "schemaDescription": "orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT order_id, amount, CASE WHEN amount < 50 THEN 'small' WHEN amount <= 200 THEN 'medium' ELSE 'large' END as category FROM orders ORDER BY order_id;"
+  },
+  {
+    "id": "sql-004",
+    "title": "Total spend for frequent customers",
+    "topic": "JOIN / GROUP BY / HAVING",
+    "difficulty": "Intermediate",
+    "prompt": "Find the total order amount per customer, but only include customers who have placed more than 2 orders. Show name and total_amount, ordered by name.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status) ON customers.customer_id = orders.customer_id",
+    "expectedQuery": "SELECT c.name, SUM(o.amount) as total_amount FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name HAVING COUNT(o.order_id) > 2 ORDER BY c.name;"
+  },
+  {
+    "id": "sql-005",
+    "title": "Customers who never ordered",
+    "topic": "LEFT JOIN / Anti-join",
+    "difficulty": "Intermediate",
+    "prompt": "List the names of customers who have never placed an order.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) LEFT JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT c.name FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id WHERE o.order_id IS NULL ORDER BY c.name;"
+  },
+  {
+    "id": "sql-006",
+    "title": "Deduplicate orders",
+    "topic": "Deduplication",
+    "difficulty": "Intermediate",
+    "prompt": "The orders table has some exact-duplicate rows (same customer_id, order_date, and amount, from a data pipeline bug). Return one row per distinct (customer_id, order_date, amount) combination, keeping the smallest order_id when there are duplicates. Show order_id, customer_id, order_date, amount, ordered by order_id.",
+    "schemaDescription": "orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT MIN(order_id) as order_id, customer_id, order_date, amount FROM orders GROUP BY customer_id, order_date, amount ORDER BY order_id;"
+  },
+  {
+    "id": "sql-007",
+    "title": "Most recent order per customer",
+    "topic": "Window Functions (ROW_NUMBER)",
+    "difficulty": "Advanced",
+    "prompt": "For each customer who has placed at least one order, find their single most recent order: show name, order_date, and amount for that order. Order the result by name.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT name, order_date, amount FROM (SELECT c.name, o.order_date, o.amount, ROW_NUMBER() OVER (PARTITION BY c.customer_id ORDER BY o.order_date DESC) as rn FROM customers c JOIN orders o ON c.customer_id = o.customer_id) t WHERE rn = 1 ORDER BY name;"
+  },
+  {
+    "id": "sql-008",
+    "title": "Rank customers by total spend",
+    "topic": "Window Functions (RANK)",
+    "difficulty": "Advanced",
+    "prompt": "Rank every customer by their total spend across all orders, highest first (customers with no orders count as $0). Show name, total_spend, and spend_rank.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) LEFT JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT name, total_spend, RANK() OVER (ORDER BY total_spend DESC) as spend_rank FROM (SELECT c.customer_id, c.name, COALESCE(SUM(o.amount),0) as total_spend FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name) t ORDER BY spend_rank;"
+  },
+  {
+    "id": "sql-009",
+    "title": "Month-over-month order revenue change",
+    "topic": "Window Functions (LAG) / Date Operations",
+    "difficulty": "Advanced",
+    "prompt": "Compute total order amount per calendar month (YYYY-MM), and the percentage change from the previous month (round to 1 decimal place). The first month should show NULL for pct_change. Show month, total, pct_change ordered by month.",
+    "schemaDescription": "orders(order_id, customer_id, order_date TEXT 'YYYY-MM-DD', amount, status)",
+    "expectedQuery": "SELECT month, total, ROUND(100.0*(total - LAG(total) OVER (ORDER BY month)) / LAG(total) OVER (ORDER BY month), 1) as pct_change FROM (SELECT strftime('%Y-%m', order_date) as month, SUM(amount) as total FROM orders GROUP BY month) t ORDER BY month;"
+  },
+  {
+    "id": "sql-010",
+    "title": "Above-average spenders (CTE)",
+    "topic": "CTEs / Subqueries",
+    "difficulty": "Expert",
+    "prompt": "Using a CTE, find customers whose total spend is strictly above the average total spend across ALL customers (customers with zero orders count as $0 and are included in the average). Show name and total_spend, ordered by total_spend descending.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) LEFT JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "WITH spend AS (SELECT c.customer_id, c.name, COALESCE(SUM(o.amount),0) as total_spend FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name) SELECT name, total_spend FROM spend WHERE total_spend > (SELECT AVG(total_spend) FROM spend) ORDER BY total_spend DESC;"
+  },
+  {
+    "id": "sql-011",
+    "title": "Running total of completed order revenue",
+    "topic": "Window Functions (SUM OVER)",
+    "difficulty": "Advanced",
+    "prompt": "For completed orders only, show order_id, order_date, amount, and a running total of amount ordered by order_date (ties broken by order_id ascending).",
+    "schemaDescription": "orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT order_id, order_date, amount, SUM(amount) OVER (ORDER BY order_date, order_id) as running_total FROM orders WHERE status = 'completed' ORDER BY order_date, order_id;"
+  },
+  {
+    "id": "sql-012",
+    "title": "Revenue share by country",
+    "topic": "Window Functions (SUM OVER, ratio)",
+    "difficulty": "Advanced",
+    "prompt": "For completed orders, show each country's total revenue and the percentage of total (all-country) revenue it represents, rounded to 1 decimal place. Order by pct_of_total descending.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "WITH rev AS (SELECT c.country as country, SUM(o.amount) as country_rev FROM customers c JOIN orders o ON c.customer_id = o.customer_id WHERE o.status = 'completed' GROUP BY c.country) SELECT country, country_rev, ROUND(100.0 * country_rev / (SELECT SUM(country_rev) FROM rev), 1) as pct_of_total FROM rev ORDER BY pct_of_total DESC;"
+  },
+  {
+    "id": "sql-013",
+    "title": "Second-highest order amount per customer",
+    "topic": "Window Functions (DENSE_RANK)",
+    "difficulty": "Expert",
+    "prompt": "For each customer, find their second-highest DISTINCT order amount (across all orders regardless of status). Customers with fewer than 2 distinct order amounts should not appear. Show name and second_highest_amount, ordered by name.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "WITH ranked AS (SELECT c.name as name, o.amount as amount, DENSE_RANK() OVER (PARTITION BY c.customer_id ORDER BY o.amount DESC) as rnk FROM customers c JOIN orders o ON c.customer_id = o.customer_id) SELECT DISTINCT name, amount as second_highest_amount FROM ranked WHERE rnk = 2 ORDER BY name;"
+  },
+  {
+    "id": "sql-014",
+    "title": "Customers active in both January and February 2024",
+    "topic": "Self-Join / Retention",
+    "difficulty": "Expert",
+    "prompt": "List the names of customers who placed at least one order in January 2024 AND at least one order in February 2024. Order by name.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT DISTINCT c.name FROM customers c JOIN orders o1 ON c.customer_id = o1.customer_id AND o1.order_date >= '2024-01-01' AND o1.order_date < '2024-02-01' JOIN orders o2 ON c.customer_id = o2.customer_id AND o2.order_date >= '2024-02-01' AND o2.order_date < '2024-03-01' ORDER BY c.name;"
+  },
+  {
+    "id": "sql-015",
+    "title": "Spend quartiles across all customers",
+    "topic": "Window Functions (NTILE)",
+    "difficulty": "Expert",
+    "prompt": "For every customer (including those with $0 in orders), compute total_spend and assign a spend_quartile from 1 (lowest) to 4 (highest) using NTILE(4) ordered by total_spend ascending. Show name, total_spend, spend_quartile ordered by total_spend.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) LEFT JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "WITH spend AS (SELECT c.customer_id as customer_id, c.name as name, COALESCE(SUM(o.amount), 0) as total_spend FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name) SELECT name, total_spend, NTILE(4) OVER (ORDER BY total_spend) as spend_quartile FROM spend ORDER BY total_spend;"
+  },
+  {
+    "id": "sql-016",
+    "title": "First order date per customer vs signup date",
+    "topic": "Aggregation / Date Comparison",
+    "difficulty": "Advanced",
+    "prompt": "For each customer who has placed at least one order, show name, signup_date, first_order_date (their earliest order_date), and days_to_first_order (the number of days between signup_date and their first order, as an integer). Order by name.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT c.name as name, c.signup_date as signup_date, MIN(o.order_date) as first_order_date, CAST(julianday(MIN(o.order_date)) - julianday(c.signup_date) AS INTEGER) as days_to_first_order FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name, c.signup_date ORDER BY c.name;"
+  },
+  {
+    "id": "sql-017",
+    "title": "Countries where every customer has ordered",
+    "topic": "Aggregation / HAVING with conditional logic",
+    "difficulty": "Expert",
+    "prompt": "Find countries where EVERY customer from that country has placed at least one order (no customer from that country has zero orders). Show country, ordered alphabetically.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) LEFT JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "SELECT c.country FROM customers c LEFT JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.country HAVING SUM(CASE WHEN o.order_id IS NULL THEN 1 ELSE 0 END) = 0 ORDER BY c.country;"
+  },
+  {
+    "id": "sql-018",
+    "title": "Average order value per customer vs overall average",
+    "topic": "Window Functions (AVG OVER, no partition)",
+    "difficulty": "Advanced",
+    "prompt": "For each customer with at least one order, show name, avg_order_value (their average order amount, rounded to 2 decimals), and a flag above_overall_avg ('yes' or 'no') indicating whether their average order value exceeds the overall average order value across ALL orders. Order by name.",
+    "schemaDescription": "customers(customer_id, name, country, signup_date) JOIN orders(order_id, customer_id, order_date, amount, status)",
+    "expectedQuery": "WITH per_customer AS (SELECT c.customer_id as customer_id, c.name as name, ROUND(AVG(o.amount), 2) as avg_order_value FROM customers c JOIN orders o ON c.customer_id = o.customer_id GROUP BY c.customer_id, c.name), overall AS (SELECT AVG(amount) as overall_avg FROM orders) SELECT name, avg_order_value, CASE WHEN avg_order_value > (SELECT overall_avg FROM overall) THEN 'yes' ELSE 'no' END as above_overall_avg FROM per_customer ORDER BY name;"
+  }
+]

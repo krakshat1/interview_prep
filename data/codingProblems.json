@@ -1,0 +1,1757 @@
+[
+  {
+    "id": "code-001",
+    "title": "Two Sum",
+    "topic": "Arrays & Hash Maps",
+    "difficulty": "Beginner",
+    "functionName": "two_sum",
+    "prompt": "Write a function two_sum(nums, target) that returns a list of the two indices whose values add up to target. Assume exactly one valid solution exists and you may not use the same element twice. Aim for better than O(n^2).",
+    "starterCode": "def two_sum(nums, target):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            2,
+            7,
+            11,
+            15
+          ],
+          9
+        ],
+        "expected": [
+          0,
+          1
+        ]
+      },
+      {
+        "input": [
+          [
+            3,
+            2,
+            4
+          ],
+          6
+        ],
+        "expected": [
+          1,
+          2
+        ]
+      },
+      {
+        "input": [
+          [
+            3,
+            3
+          ],
+          6
+        ],
+        "expected": [
+          0,
+          1
+        ]
+      }
+    ],
+    "solutionNote": "Use a hash map of value -> index while scanning once: for each number, check whether target - number has already been seen. This is O(n) time / O(n) space, versus O(n^2) for the brute-force nested loop."
+  },
+  {
+    "id": "code-002",
+    "title": "Valid Palindrome",
+    "topic": "Strings",
+    "difficulty": "Beginner",
+    "functionName": "is_palindrome",
+    "prompt": "Write a function is_palindrome(s) that returns True if s is a palindrome considering only alphanumeric characters and ignoring case, False otherwise.",
+    "starterCode": "def is_palindrome(s):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          "A man, a plan, a canal: Panama"
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          "race a car"
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          ""
+        ],
+        "expected": true
+      }
+    ],
+    "solutionNote": "Filter to lowercase alphanumeric characters, then compare the filtered string to its reverse. A two-pointer approach (converge from both ends, skip non-alphanumeric) avoids building a second string and is the answer an interviewer wants to see for the follow-up 'can you do it in O(1) extra space'."
+  },
+  {
+    "id": "code-003",
+    "title": "Container With Most Water",
+    "topic": "Two Pointers",
+    "difficulty": "Intermediate",
+    "functionName": "max_area",
+    "prompt": "Given a list of non-negative integers heights representing vertical lines at each index, write max_area(heights) returning the maximum area of water a container formed by two of the lines (and the x-axis) can hold.",
+    "starterCode": "def max_area(heights):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            8,
+            6,
+            2,
+            5,
+            4,
+            8,
+            3,
+            7
+          ]
+        ],
+        "expected": 49
+      },
+      {
+        "input": [
+          [
+            1,
+            1
+          ]
+        ],
+        "expected": 1
+      }
+    ],
+    "solutionNote": "Two pointers starting at both ends: area is limited by the shorter line, so always move the pointer at the shorter line inward (moving the taller one can only shrink width without possibly increasing height). O(n) time, O(1) space - versus O(n^2) checking every pair."
+  },
+  {
+    "id": "code-004",
+    "title": "Longest Substring Without Repeating Characters",
+    "topic": "Sliding Window",
+    "difficulty": "Intermediate",
+    "functionName": "length_of_longest_substring",
+    "prompt": "Write length_of_longest_substring(s) returning the length of the longest substring of s without repeating characters.",
+    "starterCode": "def length_of_longest_substring(s):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          "abcabcbb"
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          "bbbbb"
+        ],
+        "expected": 1
+      },
+      {
+        "input": [
+          "pwwkew"
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          ""
+        ],
+        "expected": 0
+      }
+    ],
+    "solutionNote": "Sliding window with a hash map of character -> last seen index. Expand the window's right edge each step; when you see a repeat inside the current window, jump the left edge past its previous occurrence. O(n) time."
+  },
+  {
+    "id": "code-005",
+    "title": "Search in Rotated Sorted Array",
+    "topic": "Binary Search",
+    "difficulty": "Intermediate",
+    "functionName": "search_rotated",
+    "prompt": "Given a sorted array that has been rotated at an unknown pivot, and a target value, write search_rotated(nums, target) returning the index of target, or -1 if not found. Must run in O(log n).",
+    "starterCode": "def search_rotated(nums, target):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            4,
+            5,
+            6,
+            7,
+            0,
+            1,
+            2
+          ],
+          0
+        ],
+        "expected": 4
+      },
+      {
+        "input": [
+          [
+            4,
+            5,
+            6,
+            7,
+            0,
+            1,
+            2
+          ],
+          3
+        ],
+        "expected": -1
+      },
+      {
+        "input": [
+          [
+            1
+          ],
+          0
+        ],
+        "expected": -1
+      }
+    ],
+    "solutionNote": "Modified binary search: at each step, one half of the array (from lo to mid, or mid to hi) is guaranteed to be normally sorted. Check which half is sorted, then check whether target lies within that half's range to decide which side to recurse into."
+  },
+  {
+    "id": "code-006",
+    "title": "Generate Parentheses",
+    "topic": "Recursion / Backtracking",
+    "difficulty": "Advanced",
+    "functionName": "generate_parenthesis",
+    "prompt": "Write generate_parenthesis(n) that returns a list of all combinations of n pairs of well-formed (balanced) parentheses, sorted alphabetically.",
+    "starterCode": "def generate_parenthesis(n):\n    # your code here - remember to return the list sorted alphabetically\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          1
+        ],
+        "expected": [
+          "()"
+        ]
+      },
+      {
+        "input": [
+          2
+        ],
+        "expected": [
+          "(())",
+          "()()"
+        ]
+      },
+      {
+        "input": [
+          3
+        ],
+        "expected": [
+          "((()))",
+          "(()())",
+          "(())()",
+          "()(())",
+          "()()()"
+        ]
+      }
+    ],
+    "solutionNote": "Backtracking: track open_count and close_count used so far. You can add '(' whenever open_count < n, and ')' whenever close_count < open_count (never more closes than opens). Base case: string length == 2n."
+  },
+  {
+    "id": "code-007",
+    "title": "Longest Increasing Subsequence",
+    "topic": "Dynamic Programming",
+    "difficulty": "Advanced",
+    "functionName": "length_of_lis",
+    "prompt": "Write length_of_lis(nums) returning the length of the longest strictly increasing subsequence of nums.",
+    "starterCode": "def length_of_lis(nums):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            10,
+            9,
+            2,
+            5,
+            3,
+            7,
+            101,
+            18
+          ]
+        ],
+        "expected": 4
+      },
+      {
+        "input": [
+          [
+            0,
+            1,
+            0,
+            3,
+            2,
+            3
+          ]
+        ],
+        "expected": 4
+      },
+      {
+        "input": [
+          [
+            7,
+            7,
+            7,
+            7
+          ]
+        ],
+        "expected": 1
+      }
+    ],
+    "solutionNote": "O(n^2) DP: dp[i] = length of the longest increasing subsequence ending exactly at index i. dp[i] = 1 + max(dp[j] for j < i if nums[j] < nums[i]), else 1. Answer is max(dp). A follow-up worth knowing: this can be improved to O(n log n) using patience sorting with binary search."
+  },
+  {
+    "id": "code-008",
+    "title": "Coin Change",
+    "topic": "Dynamic Programming",
+    "difficulty": "Advanced",
+    "functionName": "coin_change",
+    "prompt": "Given a list of coin denominations and a target amount, write coin_change(coins, amount) returning the fewest number of coins needed to make up that amount, or -1 if it's not possible. You may assume an unlimited supply of each coin.",
+    "starterCode": "def coin_change(coins, amount):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            2,
+            5
+          ],
+          11
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          [
+            2
+          ],
+          3
+        ],
+        "expected": -1
+      },
+      {
+        "input": [
+          [
+            1
+          ],
+          0
+        ],
+        "expected": 0
+      }
+    ],
+    "solutionNote": "Bottom-up DP: dp[a] = fewest coins to make amount a, dp[0] = 0. For each amount from 1 to target, dp[a] = min over each coin c <= a of dp[a-c] + 1. Return dp[amount], or -1 if it's still infinity (unreachable)."
+  },
+  {
+    "id": "code-009",
+    "title": "Merge Intervals",
+    "topic": "Arrays & Sorting",
+    "difficulty": "Advanced",
+    "functionName": "merge_intervals",
+    "prompt": "Write merge_intervals(intervals) that takes a list of [start, end] intervals (not necessarily sorted) and merges all overlapping intervals, returning the merged list sorted by start.",
+    "starterCode": "def merge_intervals(intervals):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            [
+              1,
+              3
+            ],
+            [
+              2,
+              6
+            ],
+            [
+              8,
+              10
+            ],
+            [
+              15,
+              18
+            ]
+          ]
+        ],
+        "expected": [
+          [
+            1,
+            6
+          ],
+          [
+            8,
+            10
+          ],
+          [
+            15,
+            18
+          ]
+        ]
+      },
+      {
+        "input": [
+          [
+            [
+              1,
+              4
+            ],
+            [
+              4,
+              5
+            ]
+          ]
+        ],
+        "expected": [
+          [
+            1,
+            5
+          ]
+        ]
+      },
+      {
+        "input": [
+          [
+            [
+              1,
+              4
+            ],
+            [
+              0,
+              4
+            ]
+          ]
+        ],
+        "expected": [
+          [
+            0,
+            4
+          ]
+        ]
+      }
+    ],
+    "solutionNote": "Sort intervals by start. Walk through, keeping a 'current merged' interval; if the next interval's start is <= current merged end, extend the merge (end = max(end, next.end)), otherwise close out the current merged interval and start a new one. O(n log n) for the sort, O(n) for the merge pass."
+  },
+  {
+    "id": "code-010",
+    "title": "LRU Cache",
+    "topic": "Design / Hash Map + Linked List",
+    "difficulty": "Expert",
+    "functionName": "lru_cache_ops",
+    "prompt": "Implement an LRU (Least Recently Used) cache. Write lru_cache_ops(capacity, operations) where operations is a list of ['put', key, value] or ['get', key]. Process them in order against a cache of the given capacity. Return a list with one entry per operation: for 'put' append None; for 'get' append the value if the key is present (and mark it as just-used), or -1 if not present. When a 'put' exceeds capacity, evict the least recently used key first (both 'get' and 'put' count as using a key).",
+    "starterCode": "def lru_cache_ops(capacity, operations):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          2,
+          [
+            [
+              "put",
+              1,
+              1
+            ],
+            [
+              "put",
+              2,
+              2
+            ],
+            [
+              "get",
+              1
+            ],
+            [
+              "put",
+              3,
+              3
+            ],
+            [
+              "get",
+              2
+            ],
+            [
+              "put",
+              4,
+              4
+            ],
+            [
+              "get",
+              1
+            ],
+            [
+              "get",
+              3
+            ],
+            [
+              "get",
+              4
+            ]
+          ]
+        ],
+        "expected": [
+          null,
+          null,
+          1,
+          null,
+          -1,
+          null,
+          -1,
+          3,
+          4
+        ]
+      },
+      {
+        "input": [
+          1,
+          [
+            [
+              "put",
+              1,
+              10
+            ],
+            [
+              "get",
+              1
+            ],
+            [
+              "put",
+              2,
+              20
+            ],
+            [
+              "get",
+              1
+            ],
+            [
+              "get",
+              2
+            ]
+          ]
+        ],
+        "expected": [
+          null,
+          10,
+          null,
+          -1,
+          20
+        ]
+      }
+    ],
+    "solutionNote": "A hash map (dict) gives O(1) key lookup; an OrderedDict (or a dict plus manual doubly-linked list) gives O(1) reordering to track recency. In Python, collections.OrderedDict's move_to_end() and popitem(last=False) make this a few lines: on get/put, move the key to the end (most recently used); on put when over capacity, pop the first item (least recently used)."
+  },
+  {
+    "id": "code-011",
+    "title": "Number of Islands",
+    "topic": "Graphs / DFS",
+    "difficulty": "Intermediate",
+    "functionName": "num_islands",
+    "prompt": "Given a 2D grid of 0s and 1s where 1 represents land and 0 represents water, write num_islands(grid) returning the number of islands. An island is a group of 1s connected horizontally or vertically (not diagonally).",
+    "starterCode": "def num_islands(grid):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              1,
+              1,
+              0,
+              0
+            ],
+            [
+              0,
+              0,
+              1,
+              0
+            ],
+            [
+              0,
+              0,
+              0,
+              1
+            ]
+          ]
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          [
+            [
+              0,
+              0
+            ],
+            [
+              0,
+              0
+            ]
+          ]
+        ],
+        "expected": 0
+      },
+      {
+        "input": [
+          [
+            [
+              1
+            ]
+          ]
+        ],
+        "expected": 1
+      }
+    ],
+    "solutionNote": "Scan every cell; whenever you find an unvisited 1, that's a new island - flood-fill (DFS or BFS) from it, marking every connected 1 as visited so it's not counted again, and increment the island count once per flood-fill. O(rows*cols) time and space."
+  },
+  {
+    "id": "code-012",
+    "title": "Top K Frequent Elements",
+    "topic": "Heaps / Hash Map",
+    "difficulty": "Advanced",
+    "functionName": "top_k_frequent",
+    "prompt": "Write top_k_frequent(nums, k) returning the k most frequent elements in nums, as a list ordered by frequency descending. Break ties by returning the smaller value first.",
+    "starterCode": "def top_k_frequent(nums, k):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            1,
+            1,
+            2,
+            2,
+            3
+          ],
+          2
+        ],
+        "expected": [
+          1,
+          2
+        ]
+      },
+      {
+        "input": [
+          [
+            1
+          ],
+          1
+        ],
+        "expected": [
+          1
+        ]
+      },
+      {
+        "input": [
+          [
+            4,
+            4,
+            5,
+            5,
+            6
+          ],
+          2
+        ],
+        "expected": [
+          4,
+          5
+        ]
+      }
+    ],
+    "solutionNote": "Count frequencies with a hash map (collections.Counter), then select the top k by (-frequency, value) so ties break on the smaller value. A heap (heapq.nlargest / nsmallest with a custom key, or a bucket-sort by frequency) gets this in O(n log k) instead of a full O(n log n) sort - worth mentioning as the follow-up optimization."
+  },
+  {
+    "id": "code-013",
+    "title": "Kth Largest Element in an Array",
+    "topic": "Heaps / Quickselect",
+    "difficulty": "Intermediate",
+    "functionName": "find_kth_largest",
+    "prompt": "Write find_kth_largest(nums, k) returning the kth largest element in the array (1st largest is the maximum), without assuming the array is sorted.",
+    "starterCode": "def find_kth_largest(nums, k):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            3,
+            2,
+            1,
+            5,
+            6,
+            4
+          ],
+          2
+        ],
+        "expected": 5
+      },
+      {
+        "input": [
+          [
+            3,
+            2,
+            3,
+            1,
+            2,
+            4,
+            5,
+            5,
+            6
+          ],
+          4
+        ],
+        "expected": 4
+      }
+    ],
+    "solutionNote": "A min-heap of size k (push each element, pop when size exceeds k) leaves the kth largest at the top in O(n log k). The optimal average-case approach is Quickselect (partition like quicksort, but only recurse into the side containing the target rank) at O(n) average time. Sorting and indexing works too but is O(n log n) - worth naming as the naive baseline."
+  },
+  {
+    "id": "code-014",
+    "title": "Median of Two Sorted Arrays",
+    "topic": "Binary Search",
+    "difficulty": "Expert",
+    "functionName": "find_median_sorted_arrays",
+    "prompt": "Given two sorted arrays nums1 and nums2, write find_median_sorted_arrays(nums1, nums2) returning the median of the combined sorted array, as a float. Aim for better than O(m+n) if you can (true optimum is O(log(min(m,n)))), but a correct O(m+n) merge-based solution is an acceptable first pass.",
+    "starterCode": "def find_median_sorted_arrays(nums1, nums2):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            3
+          ],
+          [
+            2
+          ]
+        ],
+        "expected": 2.0
+      },
+      {
+        "input": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ]
+        ],
+        "expected": 2.5
+      },
+      {
+        "input": [
+          [],
+          [
+            1
+          ]
+        ],
+        "expected": 1.0
+      }
+    ],
+    "solutionNote": "Simplest correct approach: merge the two sorted arrays (or just walk both with two pointers without fully materializing a merged list) and take the middle element (odd total length) or average of the two middle elements (even total length) - O(m+n). The optimal O(log(min(m,n))) approach binary-searches for a partition point in the smaller array such that the left halves of both arrays combined contain exactly half the total elements, with every left element <= every right element."
+  },
+  {
+    "id": "code-015",
+    "title": "Group Anagrams",
+    "topic": "Hashing",
+    "difficulty": "Advanced",
+    "functionName": "group_anagrams",
+    "prompt": "Write group_anagrams(strs) that groups the strings in strs into lists of anagrams of each other, preserving each group's original relative order. Return the groups as a list sorted by the sorted-letters key of each group (e.g. the group for 'eat' sorts under key 'aet').",
+    "starterCode": "def group_anagrams(strs):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            "eat",
+            "tea",
+            "tan",
+            "ate",
+            "nat",
+            "bat"
+          ]
+        ],
+        "expected": [
+          [
+            "bat"
+          ],
+          [
+            "eat",
+            "tea",
+            "ate"
+          ],
+          [
+            "tan",
+            "nat"
+          ]
+        ]
+      },
+      {
+        "input": [
+          [
+            "a"
+          ]
+        ],
+        "expected": [
+          [
+            "a"
+          ]
+        ]
+      },
+      {
+        "input": [
+          [
+            ""
+          ]
+        ],
+        "expected": [
+          [
+            ""
+          ]
+        ]
+      }
+    ],
+    "solutionNote": "Use the sorted tuple/string of each word's letters as a hash map key - all anagrams share the same sorted-letters key. Group into a dict of key -> list (preserving insertion order for each group), then return the groups sorted by key. O(n * k log k) where k is the max string length, for sorting each string's letters."
+  },
+  {
+    "id": "code-016",
+    "title": "Moving Averages",
+    "topic": "Sliding Window / Data Manipulation",
+    "difficulty": "Intermediate",
+    "functionName": "moving_averages",
+    "prompt": "Write moving_averages(nums, window) returning a list of the average of every contiguous window-sized subarray of nums, in order (only full windows - the result has len(nums) - window + 1 elements). Round each average to 2 decimal places.",
+    "starterCode": "def moving_averages(nums, window):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            3,
+            5,
+            7,
+            9
+          ],
+          3
+        ],
+        "expected": [
+          3.0,
+          5.0,
+          7.0
+        ]
+      },
+      {
+        "input": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          2
+        ],
+        "expected": [
+          1.5,
+          2.5,
+          3.5
+        ]
+      },
+      {
+        "input": [
+          [
+            5
+          ],
+          1
+        ],
+        "expected": [
+          5.0
+        ]
+      }
+    ],
+    "solutionNote": "Maintain a running window sum: start with the sum of the first `window` elements, then slide one step at a time by subtracting the element leaving the window and adding the one entering it - O(n) instead of re-summing each window from scratch (O(n*window)). This is the same 'sliding window aggregate' pattern used constantly in real data pipelines (e.g. rolling metrics)."
+  },
+  {
+    "id": "code-017",
+    "title": "Trapping Rain Water",
+    "topic": "Two Pointers / Stack",
+    "difficulty": "Expert",
+    "functionName": "trap",
+    "prompt": "Given a list of non-negative integers representing an elevation map's bar heights, write trap(height) returning how much water it can trap after raining.",
+    "starterCode": "def trap(height):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            0,
+            1,
+            0,
+            2,
+            1,
+            0,
+            1,
+            3,
+            2,
+            1,
+            2,
+            1
+          ]
+        ],
+        "expected": 6
+      },
+      {
+        "input": [
+          [
+            4,
+            2,
+            0,
+            3,
+            2,
+            5
+          ]
+        ],
+        "expected": 9
+      },
+      {
+        "input": [
+          []
+        ],
+        "expected": 0
+      }
+    ],
+    "solutionNote": "Water trapped above any bar is min(max height to its left, max height to its right) minus its own height. The two-pointer approach tracks running left_max/right_max from both ends inward, always advancing the pointer on the side with the smaller max (since that side's bound is already determined - the taller side can't be the limiting factor), giving O(n) time and O(1) space versus O(n) space for a precomputed left-max/right-max array approach."
+  },
+  {
+    "id": "code-018",
+    "title": "Linear Regression: One Gradient Descent Step",
+    "topic": "ML From Scratch",
+    "difficulty": "Expert",
+    "functionName": "gradient_descent_step",
+    "prompt": "Implement one step of batch gradient descent for linear regression from scratch (no NumPy/sklearn). Write gradient_descent_step(X, y, weights, bias, learning_rate) where X is a list of feature-vectors (list of lists), y is a list of targets, weights is a list of current weights (one per feature), and bias is a float. Prediction for row i is prediction_i = dot(X[i], weights) + bias. Let error_i = prediction_i - y[i]. The gradient w.r.t. weight j is (1/n) * sum over i of (error_i * X[i][j]); the gradient w.r.t. bias is (1/n) * sum over i of error_i. Update: new_weights = weights - learning_rate * gradient_weights (elementwise), new_bias = bias - learning_rate * gradient_bias. Return [new_weights, new_bias], rounding every returned number to 4 decimal places.",
+    "starterCode": "def gradient_descent_step(X, y, weights, bias, learning_rate):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ],
+            [
+              3
+            ]
+          ],
+          [
+            2,
+            4,
+            6
+          ],
+          [
+            0.0
+          ],
+          0.0,
+          0.1
+        ],
+        "expected": [
+          [
+            0.9333
+          ],
+          0.4
+        ]
+      },
+      {
+        "input": [
+          [
+            [
+              1
+            ],
+            [
+              2
+            ]
+          ],
+          [
+            3,
+            5
+          ],
+          [
+            1.0
+          ],
+          0.5,
+          0.01
+        ],
+        "expected": [
+          [
+            1.0325
+          ],
+          0.52
+        ]
+      }
+    ],
+    "solutionNote": "This is the mechanical core of how every gradient-based ML model actually learns: compute predictions, compute the error signal, compute the average gradient of the loss (mean squared error here) with respect to each parameter, then step every parameter a small distance (learning_rate) opposite the gradient. Getting this right by hand is what an interviewer is checking when they ask you to 'implement linear regression from scratch' - the same update rule generalizes directly to logistic regression (different loss, same gradient-descent skeleton) and to each layer of a neural network via backprop."
+  },
+  {
+    "id": "code-019",
+    "title": "Valid Parentheses",
+    "topic": "Stacks",
+    "difficulty": "Beginner",
+    "functionName": "is_valid_parentheses",
+    "prompt": "Write is_valid_parentheses(s) that returns True if the string s, containing only the characters '(', ')', '{', '}', '[' and ']', is valid. A string is valid if every opening bracket has a matching closing bracket of the same type, and brackets close in the correct order (e.g. '([)]' is NOT valid even though each bracket type appears in matched pairs).",
+    "starterCode": "def is_valid_parentheses(s):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          "()[]{}"
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          "(]"
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          "([)]"
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          ""
+        ],
+        "expected": true
+      }
+    ],
+    "solutionNote": "Push every opening bracket onto a stack. On a closing bracket, it must match the type on top of the stack (pop and compare); if the stack is empty or the types don't match, the string is invalid. At the end, the string is valid only if the stack is empty (no unclosed brackets). O(n) time, O(n) space - the canonical use case for a stack, since it naturally tracks the most recently opened, still-unclosed bracket."
+  },
+  {
+    "id": "code-020",
+    "title": "Min Stack",
+    "topic": "Stacks / Design",
+    "difficulty": "Intermediate",
+    "functionName": "min_stack_ops",
+    "prompt": "Design a stack that supports push, pop, top, and retrieving the minimum element, all in O(1). Write min_stack_ops(operations) where operations is a list of ['push', val], ['pop'], ['top'], or ['getMin']. Process them in order against a single stack that starts empty. Return a list with one entry per operation: for 'push' and 'pop' append None; for 'top' append the value currently on top of the stack; for 'getMin' append the current minimum value in the stack. You may assume 'pop', 'top', and 'getMin' are never called on an empty stack.",
+    "starterCode": "def min_stack_ops(operations):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            [
+              "push",
+              -2
+            ],
+            [
+              "push",
+              0
+            ],
+            [
+              "push",
+              -3
+            ],
+            [
+              "getMin"
+            ],
+            [
+              "pop"
+            ],
+            [
+              "top"
+            ],
+            [
+              "getMin"
+            ]
+          ]
+        ],
+        "expected": [
+          null,
+          null,
+          null,
+          -3,
+          null,
+          0,
+          -2
+        ]
+      },
+      {
+        "input": [
+          [
+            [
+              "push",
+              5
+            ],
+            [
+              "getMin"
+            ],
+            [
+              "push",
+              3
+            ],
+            [
+              "getMin"
+            ],
+            [
+              "pop"
+            ],
+            [
+              "getMin"
+            ]
+          ]
+        ],
+        "expected": [
+          null,
+          5,
+          null,
+          3,
+          null,
+          5
+        ]
+      },
+      {
+        "input": [
+          [
+            [
+              "push",
+              1
+            ],
+            [
+              "push",
+              2
+            ],
+            [
+              "top"
+            ],
+            [
+              "pop"
+            ],
+            [
+              "top"
+            ]
+          ]
+        ],
+        "expected": [
+          null,
+          null,
+          2,
+          null,
+          1
+        ]
+      }
+    ],
+    "solutionNote": "Maintain a second stack alongside the main one that tracks the running minimum: push the smaller of (new value, current min) onto it on every push, and pop from both stacks together. That keeps getMin, push, and pop all O(1), instead of scanning the whole stack for the minimum each time (O(n)). This is the same 'auxiliary structure mirrors the primary one' trick used in the LRU Cache design problem."
+  },
+  {
+    "id": "code-021",
+    "title": "Sliding Window Maximum",
+    "topic": "Queues / Sliding Window",
+    "difficulty": "Advanced",
+    "functionName": "max_sliding_window",
+    "prompt": "Given an array of integers nums and a window size k, write max_sliding_window(nums, k) that returns a list containing the maximum value in each contiguous window of size k as it slides from left to right across nums (one output value per window position, in order).",
+    "starterCode": "def max_sliding_window(nums, k):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            3,
+            -1,
+            -3,
+            5,
+            3,
+            6,
+            7
+          ],
+          3
+        ],
+        "expected": [
+          3,
+          3,
+          5,
+          5,
+          6,
+          7
+        ]
+      },
+      {
+        "input": [
+          [
+            1
+          ],
+          1
+        ],
+        "expected": [
+          1
+        ]
+      },
+      {
+        "input": [
+          [
+            9,
+            11
+          ],
+          2
+        ],
+        "expected": [
+          11
+        ]
+      },
+      {
+        "input": [
+          [
+            4,
+            -2
+          ],
+          2
+        ],
+        "expected": [
+          4
+        ]
+      }
+    ],
+    "solutionNote": "Use a monotonic deque of indices whose values are decreasing: before appending index i, pop from the back any indices whose value is <= nums[i] (they can never again be the max while i is in the window), and pop from the front any index that has fallen outside the current window. The front of the deque is always the current window's maximum. O(n) time overall since each index is pushed and popped at most once, versus O(n*k) for recomputing the max of every window from scratch."
+  },
+  {
+    "id": "code-022",
+    "title": "Reverse Linked List",
+    "topic": "Linked Lists",
+    "difficulty": "Beginner",
+    "functionName": "reverse_linked_list",
+    "prompt": "A singly linked list is represented in this problem as a plain Python list of its node values, in order from head to tail (e.g. the list 1 -> 2 -> 3 is represented as [1, 2, 3]). Write reverse_linked_list(vals) that returns a new list of values representing the linked list reversed. Even though the input/output here are plain lists for testability, implement this the way you would with real ListNode objects (walking node by node and re-pointing next pointers), not by simply slicing the list.",
+    "starterCode": "def reverse_linked_list(vals):\n    # your code here - reverse the linked list represented by vals\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            2,
+            3,
+            4,
+            5
+          ]
+        ],
+        "expected": [
+          5,
+          4,
+          3,
+          2,
+          1
+        ]
+      },
+      {
+        "input": [
+          []
+        ],
+        "expected": []
+      },
+      {
+        "input": [
+          [
+            1
+          ]
+        ],
+        "expected": [
+          1
+        ]
+      },
+      {
+        "input": [
+          [
+            1,
+            2
+          ]
+        ],
+        "expected": [
+          2,
+          1
+        ]
+      }
+    ],
+    "solutionNote": "Iterate with two pointers, prev (starts as None) and curr (starts at head): at each node, save curr.next, point curr.next back to prev, then advance prev and curr forward. After the loop, prev is the new head. O(n) time, O(1) extra space - the pointer-rewiring pattern every linked-list problem builds on."
+  },
+  {
+    "id": "code-023",
+    "title": "Merge Two Sorted Lists",
+    "topic": "Linked Lists",
+    "difficulty": "Beginner",
+    "functionName": "merge_two_lists",
+    "prompt": "Two singly linked lists, each already sorted in ascending order, are represented as plain Python lists of values (e.g. 1 -> 2 -> 4 is [1, 2, 4]). Write merge_two_lists(list1, list2) that merges them into one sorted linked list and returns it as a list of values. Implement this as a real merge (splicing nodes together by advancing two pointers), not by concatenating and re-sorting.",
+    "starterCode": "def merge_two_lists(list1, list2):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            1,
+            2,
+            4
+          ],
+          [
+            1,
+            3,
+            4
+          ]
+        ],
+        "expected": [
+          1,
+          1,
+          2,
+          3,
+          4,
+          4
+        ]
+      },
+      {
+        "input": [
+          [],
+          []
+        ],
+        "expected": []
+      },
+      {
+        "input": [
+          [],
+          [
+            0
+          ]
+        ],
+        "expected": [
+          0
+        ]
+      },
+      {
+        "input": [
+          [
+            2,
+            6,
+            8
+          ],
+          [
+            1,
+            3
+          ]
+        ],
+        "expected": [
+          1,
+          2,
+          3,
+          6,
+          8
+        ]
+      }
+    ],
+    "solutionNote": "Walk both lists with a pointer each, always taking the smaller of the two current values and advancing that list's pointer; once one list is exhausted, append the remainder of the other list wholesale. With real ListNode objects you'd splice existing nodes onto a dummy head rather than allocate new ones. O(n+m) time, O(1) extra space beyond the output."
+  },
+  {
+    "id": "code-024",
+    "title": "Linked List Cycle Detection",
+    "topic": "Linked Lists",
+    "difficulty": "Intermediate",
+    "functionName": "has_cycle",
+    "prompt": "A singly linked list is represented as a list of node values, vals, plus an integer pos: if pos is -1 there is no cycle, otherwise the last node's next pointer points back to the node at index pos (creating a cycle) instead of to None. Write has_cycle(vals, pos) returning True if the linked list described this way contains a cycle, False otherwise. Use Floyd's cycle-detection (slow/fast pointers) rather than a visited-set, to solve it in O(1) extra space.",
+    "starterCode": "def has_cycle(vals, pos):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            3,
+            2,
+            0,
+            -4
+          ],
+          1
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          [
+            1,
+            2
+          ],
+          0
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          [
+            1
+          ],
+          -1
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          [],
+          -1
+        ],
+        "expected": false
+      }
+    ],
+    "solutionNote": "Floyd's tortoise-and-hare: move a slow pointer one step and a fast pointer two steps at a time; if there is a cycle, the fast pointer will eventually lap the slow pointer and they'll land on the same node, otherwise fast reaches the end (None) first. O(n) time, O(1) space - versus O(n) space for a hash set of visited nodes."
+  },
+  {
+    "id": "code-025",
+    "title": "Maximum Depth of Binary Tree",
+    "topic": "Trees / Binary Trees",
+    "difficulty": "Beginner",
+    "functionName": "max_depth",
+    "prompt": "A binary tree is represented as a level-order (breadth-first) list, using None for missing children, the same way LeetCode represents trees - e.g. [3, 9, 20, None, None, 15, 7] is the tree with root 3, left child 9 (a leaf), and right child 20 (whose children are 15 and 7). Write max_depth(tree) returning the number of nodes along the longest path from the root down to the farthest leaf (an empty tree has depth 0, a single node has depth 1). You may convert the level-order list into real tree-node objects internally if you prefer.",
+    "starterCode": "def max_depth(tree):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            3,
+            9,
+            20,
+            null,
+            null,
+            15,
+            7
+          ]
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          [
+            1,
+            null,
+            2
+          ]
+        ],
+        "expected": 2
+      },
+      {
+        "input": [
+          []
+        ],
+        "expected": 0
+      },
+      {
+        "input": [
+          [
+            1
+          ]
+        ],
+        "expected": 1
+      }
+    ],
+    "solutionNote": "Build the tree from the level-order list (each node's children come from the next two unconsumed slots, skipping None entries entirely - they have no children to fill), then recurse: depth(node) = 0 for None, else 1 + max(depth(left), depth(right)). O(n) time and space. This same level-order-list-to-tree conversion is the reusable building block for every other tree problem in this set."
+  },
+  {
+    "id": "code-026",
+    "title": "Binary Tree Level Order Traversal",
+    "topic": "Trees / Binary Trees",
+    "difficulty": "Intermediate",
+    "functionName": "level_order",
+    "prompt": "A binary tree is represented as a level-order list with None for missing children (e.g. [3, 9, 20, None, None, 15, 7]). Write level_order(tree) that returns the tree's level-order traversal as a list of lists - one inner list per depth level, each containing that level's node values left-to-right, top level first.",
+    "starterCode": "def level_order(tree):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            3,
+            9,
+            20,
+            null,
+            null,
+            15,
+            7
+          ]
+        ],
+        "expected": [
+          [
+            3
+          ],
+          [
+            9,
+            20
+          ],
+          [
+            15,
+            7
+          ]
+        ]
+      },
+      {
+        "input": [
+          [
+            1
+          ]
+        ],
+        "expected": [
+          [
+            1
+          ]
+        ]
+      },
+      {
+        "input": [
+          []
+        ],
+        "expected": []
+      }
+    ],
+    "solutionNote": "BFS with a queue, processed one full level at a time: start the queue with just the root, then repeatedly record the values of every node currently in the queue, and refill the queue with all of their non-null children before moving to the next level. O(n) time and space. (Note the input list is already in level order - the point of the exercise is producing that structure via real tree traversal, not just reshaping the array.)"
+  },
+  {
+    "id": "code-027",
+    "title": "Validate Binary Search Tree",
+    "topic": "Trees / Binary Search Trees",
+    "difficulty": "Intermediate",
+    "functionName": "is_valid_bst",
+    "prompt": "A binary tree is represented as a level-order list with None for missing children. Write is_valid_bst(tree) returning True if it is a valid binary search tree: for every node, all values in its left subtree are strictly less than the node's value, and all values in its right subtree are strictly greater (equal values are not allowed anywhere in the relevant subtree, not just at the immediate children).",
+    "starterCode": "def is_valid_bst(tree):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            2,
+            1,
+            3
+          ]
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          [
+            5,
+            1,
+            4,
+            null,
+            null,
+            3,
+            6
+          ]
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          []
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          [
+            1,
+            1
+          ]
+        ],
+        "expected": false
+      }
+    ],
+    "solutionNote": "Checking only that each node's value is greater than its immediate left child and less than its immediate right child is a classic bug - it misses violations from a grandchild further down. Instead recurse with a valid (low, high) range for each node, starting at (-infinity, +infinity): a node must fall strictly inside that range, and it tightens the range passed to its children (left child gets (low, node.val), right child gets (node.val, high)). O(n) time, O(h) space for the recursion stack."
+  },
+  {
+    "id": "code-028",
+    "title": "Lowest Common Ancestor of a Binary Tree",
+    "topic": "Trees / Binary Trees",
+    "difficulty": "Advanced",
+    "functionName": "lowest_common_ancestor",
+    "prompt": "A binary tree with all-unique node values is represented as a level-order list with None for missing children. Write lowest_common_ancestor(tree, p, q) that returns the value of the lowest (deepest) node in the tree that has both p and q as descendants (a node is considered a descendant of itself). You may assume both p and q exist somewhere in the tree.",
+    "starterCode": "def lowest_common_ancestor(tree, p, q):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            3,
+            5,
+            1,
+            6,
+            2,
+            0,
+            8,
+            null,
+            null,
+            7,
+            4
+          ],
+          5,
+          1
+        ],
+        "expected": 3
+      },
+      {
+        "input": [
+          [
+            3,
+            5,
+            1,
+            6,
+            2,
+            0,
+            8,
+            null,
+            null,
+            7,
+            4
+          ],
+          5,
+          4
+        ],
+        "expected": 5
+      },
+      {
+        "input": [
+          [
+            1,
+            2
+          ],
+          1,
+          2
+        ],
+        "expected": 1
+      }
+    ],
+    "solutionNote": "Recurse from the root: if the current node's value is p or q, or is None, return it immediately (a match short-circuits the search on that branch). Otherwise recurse into both children; if both sides return a non-null result, the current node is where the paths to p and q diverge, so it's the LCA - return it upward. If only one side is non-null, propagate that result up unchanged. O(n) time, O(h) space, single pass - no need to build separate root-to-p and root-to-q paths first."
+  },
+  {
+    "id": "code-029",
+    "title": "Course Schedule",
+    "topic": "Graphs / Topological Sort",
+    "difficulty": "Advanced",
+    "functionName": "can_finish",
+    "prompt": "There are num_courses courses labeled 0 to num_courses - 1. prerequisites is a list of pairs [a, b] meaning you must take course b before course a. Write can_finish(num_courses, prerequisites) returning True if it's possible to finish all courses (i.e. the prerequisite graph has no cycle), False otherwise.",
+    "starterCode": "def can_finish(num_courses, prerequisites):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          2,
+          [
+            [
+              1,
+              0
+            ]
+          ]
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          2,
+          [
+            [
+              1,
+              0
+            ],
+            [
+              0,
+              1
+            ]
+          ]
+        ],
+        "expected": false
+      },
+      {
+        "input": [
+          4,
+          [
+            [
+              1,
+              0
+            ],
+            [
+              2,
+              0
+            ],
+            [
+              3,
+              1
+            ],
+            [
+              3,
+              2
+            ]
+          ]
+        ],
+        "expected": true
+      },
+      {
+        "input": [
+          1,
+          []
+        ],
+        "expected": true
+      }
+    ],
+    "solutionNote": "Model courses as a directed graph (edge b -> a for prerequisite pair [a, b]) and run Kahn's algorithm: track each course's in-degree, start a queue with every course that has in-degree 0, and repeatedly pop a course, 'complete' it, and decrement the in-degree of everything it unlocks, enqueuing any that reach 0. If every course gets visited this way, there's no cycle and all courses are finishable; if some remain unvisited, they're stuck in a cycle. O(V+E) time - equivalently, you could DFS with a 'currently visiting' set to detect back-edges (cycles) directly."
+  },
+  {
+    "id": "code-030",
+    "title": "Rotting Oranges",
+    "topic": "Graphs / BFS",
+    "difficulty": "Intermediate",
+    "functionName": "oranges_rotting",
+    "prompt": "You are given a 2D grid where each cell is 0 (empty), 1 (fresh orange), or 2 (rotten orange). Every minute, any fresh orange that is horizontally or vertically adjacent to a rotten orange becomes rotten. Write oranges_rotting(grid) returning the minimum number of minutes until no fresh orange remains, or -1 if that is impossible (some fresh orange can never be reached).",
+    "starterCode": "def oranges_rotting(grid):\n    # your code here\n    pass\n",
+    "testCases": [
+      {
+        "input": [
+          [
+            [
+              2,
+              1,
+              1
+            ],
+            [
+              1,
+              1,
+              0
+            ],
+            [
+              0,
+              1,
+              1
+            ]
+          ]
+        ],
+        "expected": 4
+      },
+      {
+        "input": [
+          [
+            [
+              2,
+              1,
+              1
+            ],
+            [
+              0,
+              1,
+              1
+            ],
+            [
+              1,
+              0,
+              1
+            ]
+          ]
+        ],
+        "expected": -1
+      },
+      {
+        "input": [
+          [
+            [
+              0,
+              2
+            ]
+          ]
+        ],
+        "expected": 0
+      },
+      {
+        "input": [
+          [
+            [
+              0
+            ]
+          ]
+        ],
+        "expected": 0
+      }
+    ],
+    "solutionNote": "Multi-source BFS: seed the queue with the positions of every already-rotten orange (not just one), then process level by level, spreading rot to fresh neighbors one minute at a time and counting fresh oranges as they turn. The number of BFS levels processed is the answer, unless some fresh oranges are left unreached at the end (disconnected from any rotten source), in which case return -1. O(rows*cols) time and space, same flood-fill shape as Number of Islands but expanding from many sources simultaneously instead of one at a time."
+  }
+]

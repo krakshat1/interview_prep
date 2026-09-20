@@ -1,0 +1,287 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Reports</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  .viz-root {
+    --series-technical: #3987e5;   /* categorical slot 1 (blue) */
+    --series-communication: #199e70; /* categorical slot 3 (aqua) */
+    --series-confidence: #c98500;  /* categorical slot 4 (yellow) */
+    --grid: #2a3350;
+    --axis: #454f70;
+  }
+  :root[data-theme="light"] .viz-root { --grid: #e1e6f0; --axis: #b6bfd2; }
+  .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12.5px; }
+  .legend .item { display: flex; align-items: center; gap: 6px; color: var(--text-dim); }
+  .legend .swatch { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+  .chart-wrap { position: relative; }
+  .tooltip {
+    position: absolute; pointer-events: none; background: var(--bg-elev-2);
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 10px;
+    font-size: 12.5px; display: none; white-space: nowrap; z-index: 5;
+  }
+  .tooltip .row { display: flex; gap: 8px; align-items: center; justify-content: space-between; }
+  .toggle-table { margin-top: 10px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Reports &amp; Progress</h1>
+  <p class="subtitle">Review past sessions and track whether you're improving over time.</p>
+
+  <div id="detailSection"></div>
+
+  <div class="card" id="trendCard">
+    <h2>Score trend across sessions</h2>
+    <div id="trendBody"><p class="muted">Loading...</p></div>
+  </div>
+
+  <div class="card">
+    <h2>Session history</h2>
+    <div id="historyBody"><p class="muted">Loading...</p></div>
+  </div>
+</div>
+
+<script src="shared.js"></script>
+<script>
+renderNav('reports.html');
+
+const urlParams = new URLSearchParams(window.location.search);
+const focusSessionId = urlParams.get('session');
+
+function badgeForScore(v) {
+  return `<span class="badge ${scoreClass(v)}">${v}</span>`;
+}
+
+// ---------- Session history table ----------
+async function loadHistory() {
+  const sessions = await api('/reports');
+  const body = document.getElementById('historyBody');
+  if (!sessions.length) {
+    body.innerHTML = '<div class="empty-state">No sessions yet. Start an interview to build your history.</div>';
+    return;
+  }
+  body.innerHTML = `
+    <table>
+      <thead><tr><th>Date</th><th>Category</th><th>Questions</th><th>Overall</th><th>Correct / Partial / Incorrect</th><th></th></tr></thead>
+      <tbody>
+        ${sessions.map(s => `
+          <tr>
+            <td>${fmtDate(s.startedAt)}</td>
+            <td><span class="badge">${escapeHtml(s.category)}</span></td>
+            <td>${s.questionCount}</td>
+            <td>${badgeForScore(s.overallScore)}</td>
+            <td class="small">${s.correctCount} / ${s.partialCount} / ${s.incorrectCount}</td>
+            <td><a href="reports.html?session=${s.id}">View report</a></td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ---------- Trend chart ----------
+function buildLineChart(container, series, points) {
+  const width = 800, height = 260, padL = 34, padR = 16, padT = 16, padB = 30;
+  const plotW = width - padL - padR, plotH = height - padT - padB;
+  const n = points.length;
+  const xFor = (i) => padL + (n === 1 ? plotW / 2 : (i / (n - 1)) * plotW);
+  const yFor = (v) => padT + plotH - (v / 10) * plotH;
+
+  let gridLines = '';
+  for (let v = 0; v <= 10; v += 2) {
+    const y = yFor(v);
+    gridLines += `<line x1="${padL}" y1="${y}" x2="${width - padR}" y2="${y}" stroke="var(--grid)" stroke-width="1"/>`;
+    gridLines += `<text x="${padL - 8}" y="${y + 4}" text-anchor="end" fill="var(--text-dim)">${v}</text>`;
+  }
+
+  let seriesPaths = '';
+  let markers = '';
+  series.forEach((s) => {
+    const d = points.map((p, i) => `${i === 0 ? 'M' : 'L'} ${xFor(i)} ${yFor(p[s.key])}`).join(' ');
+    seriesPaths += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>`;
+    points.forEach((p, i) => {
+      markers += `<circle class="pt" data-i="${i}" data-key="${s.key}" cx="${xFor(i)}" cy="${yFor(p[s.key])}" r="3.5" fill="${s.color}" stroke="var(--bg-elev)" stroke-width="1.5"/>`;
+    });
+  });
+
+  const xLabels = points.map((p, i) => {
+    if (n > 8 && i % Math.ceil(n / 8) !== 0 && i !== n - 1) return '';
+    const d = new Date(p.startedAt);
+    return `<text x="${xFor(i)}" y="${height - 8}" text-anchor="middle" fill="var(--text-dim)">${d.toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</text>`;
+  }).join('');
+
+  // Invisible hover columns for crosshair/tooltip
+  let hoverCols = '';
+  points.forEach((p, i) => {
+    const colW = plotW / n;
+    hoverCols += `<rect class="hovercol" data-i="${i}" x="${xFor(i) - colW / 2}" y="${padT}" width="${colW}" height="${plotH}" fill="transparent"/>`;
+  });
+
+  container.innerHTML = `
+    <div class="legend">
+      ${series.map(s => `<span class="item"><span class="swatch" style="background:${s.color}"></span>${s.label}</span>`).join('')}
+    </div>
+    <div class="chart-wrap">
+      <svg class="chart" viewBox="0 0 ${width} ${height}" style="width:100%; height:auto;">
+        ${gridLines}
+        ${seriesPaths}
+        ${markers}
+        ${xLabels}
+        ${hoverCols}
+      </svg>
+      <div class="tooltip" id="chartTooltip"></div>
+    </div>
+  `;
+
+  const svg = container.querySelector('svg');
+  const tooltip = container.querySelector('#chartTooltip');
+  container.querySelectorAll('.hovercol').forEach((col) => {
+    col.addEventListener('mouseenter', () => showTip(col));
+    col.addEventListener('mousemove', () => showTip(col));
+    col.addEventListener('mouseleave', () => { tooltip.style.display = 'none'; });
+  });
+
+  function showTip(col) {
+    const i = Number(col.dataset.i);
+    const p = points[i];
+    const rect = svg.getBoundingClientRect();
+    const containerRect = container.querySelector('.chart-wrap').getBoundingClientRect();
+    const scaleX = rect.width / width;
+    const px = (xFor(i)) * scaleX;
+    tooltip.style.display = 'block';
+    tooltip.style.left = Math.min(px + 10, containerRect.width - 160) + 'px';
+    tooltip.style.top = '10px';
+    tooltip.innerHTML = `
+      <div class="muted small" style="margin-bottom:4px;">${fmtDate(p.startedAt)} &middot; ${escapeHtml(p.category)}</div>
+      ${series.map(s => `<div class="row"><span><span class="swatch" style="background:${s.color}"></span> ${s.label}</span><strong>${p[s.key]}</strong></div>`).join('')}
+    `;
+  }
+}
+
+async function loadTrend() {
+  const trend = await api('/reports/trend');
+  const body = document.getElementById('trendBody');
+  if (trend.length < 2) {
+    body.innerHTML = `<div class="empty-state">Complete at least 2 sessions to see a trend. ${trend.length === 1 ? "You're 1 session in - keep going!" : "No sessions yet."}</div>`;
+    return;
+  }
+  const series = [
+    { key: 'avgTechnicalScore', label: 'Technical', color: 'var(--series-technical)' },
+    { key: 'avgCommunicationScore', label: 'Communication', color: 'var(--series-communication)' },
+    { key: 'avgConfidenceScore', label: 'Confidence', color: 'var(--series-confidence)' },
+  ];
+  const chartDiv = document.createElement('div');
+  chartDiv.className = 'viz-root';
+  body.innerHTML = '';
+  body.appendChild(chartDiv);
+  buildLineChart(chartDiv, series, trend);
+
+  const toggle = document.createElement('button');
+  toggle.className = 'ghost small toggle-table';
+  toggle.textContent = 'View as table';
+  let showingTable = false;
+  toggle.addEventListener('click', () => {
+    showingTable = !showingTable;
+    if (showingTable) {
+      chartDiv.innerHTML = `
+        <table>
+          <thead><tr><th>Date</th><th>Category</th><th>Technical</th><th>Communication</th><th>Confidence</th><th>Filler rate</th></tr></thead>
+          <tbody>
+            ${trend.map(p => `<tr>
+              <td>${fmtDate(p.startedAt)}</td>
+              <td>${escapeHtml(p.category)}</td>
+              <td>${p.avgTechnicalScore}</td>
+              <td>${p.avgCommunicationScore}</td>
+              <td>${p.avgConfidenceScore}</td>
+              <td>${(p.avgFillerRate * 100).toFixed(1)}%</td>
+            </tr>`).join('')}
+          </tbody>
+        </table>
+      `;
+      toggle.textContent = 'View as chart';
+    } else {
+      buildLineChart(chartDiv, series, trend);
+      toggle.textContent = 'View as table';
+    }
+  });
+  body.appendChild(toggle);
+}
+
+// ---------- Session detail (when ?session=id) ----------
+async function loadDetail() {
+  if (!focusSessionId) return;
+  const section = document.getElementById('detailSection');
+  section.innerHTML = `<div class="card"><span class="spinner"></span> Loading report...</div>`;
+  try {
+    const report = await api(`/interview/${focusSessionId}/report`);
+    const s = report.summary;
+    section.innerHTML = `
+      <div class="card">
+        <div class="row" style="align-items:center;">
+          <h2 style="margin:0;">Session report</h2>
+          <span class="muted small">${fmtDate(s.startedAt)}</span>
+        </div>
+
+        ${report.coachSummary ? `<p style="font-style:italic; color: var(--text-dim); border-left: 3px solid var(--accent); padding-left: 12px; margin: 14px 0;">${escapeHtml(report.coachSummary)}</p>` : ''}
+
+        <div class="score-grid">
+          <div class="score-box"><div class="num">${s.overallScore}</div><div class="label">Overall</div></div>
+          <div class="score-box"><div class="num">${s.avgTechnicalScore}</div><div class="label">Technical</div></div>
+          <div class="score-box"><div class="num">${s.avgCommunicationScore}</div><div class="label">Communication</div></div>
+          <div class="score-box"><div class="num">${s.avgConfidenceScore}</div><div class="label">Confidence</div></div>
+        </div>
+
+        <div class="row">
+          <div>
+            <h3>Results</h3>
+            <p class="small">✅ Correct: ${s.correctCount} &nbsp; ⚠️ Partial: ${s.partialCount} &nbsp; ❌ Incorrect: ${s.incorrectCount}</p>
+            <p class="small">Filler words: ${s.totalFillerWords} total, avg rate ${(s.avgFillerRate * 100).toFixed(1)}%</p>
+          </div>
+          <div>
+            <h3>Recurring communication issues</h3>
+            ${s.topIssues.length ? `<ul class="clean">${s.topIssues.map(i => `<li>${escapeHtml(i.issue)} <span class="muted small">(${i.count}×)</span></li>`).join('')}</ul>` : '<p class="muted small">None recurring.</p>'}
+          </div>
+        </div>
+
+        <h3>Concepts to review</h3>
+        ${s.topMissingConcepts.length ? `<div class="chip-list">${s.topMissingConcepts.map(c => `<span class="chip">${escapeHtml(c.concept)}${c.count > 1 ? ` ×${c.count}` : ''}</span>`).join('')}</div>` : '<p class="muted small">No gaps identified.</p>'}
+
+        <h3>Recommended for next session</h3>
+        ${report.recommendedNext.length ? `<ul class="clean">${report.recommendedNext.map(q => `<li>${escapeHtml(q.question)} <span class="badge small">${escapeHtml(q.category)}</span></li>`).join('')}</ul>` : '<p class="muted small">-</p>'}
+
+        <h3>Question-by-question</h3>
+        <table>
+          <thead><tr><th>Question</th><th>Correctness</th><th>Tech</th><th>Comm</th><th>Conf</th><th>Fillers</th></tr></thead>
+          <tbody>
+            ${report.turns.map(t => `
+              <tr>
+                <td style="max-width:360px;">${escapeHtml(t.question)}${t.isFollowUp ? ' <span class="badge small">follow-up</span>' : ''}</td>
+                <td><span class="badge ${t.evaluation.correctness === 'correct' ? 'good' : t.evaluation.correctness === 'partially_correct' ? 'warn' : 'bad'}">${t.evaluation.correctness.replace('_',' ')}</span></td>
+                <td>${t.evaluation.technicalScore}</td>
+                <td>${t.evaluation.communicationScore}</td>
+                <td>${t.evaluation.confidenceScore}</td>
+                <td>${t.fillerStats.totalFillerWords}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+      </div>
+    `;
+  } catch (e) {
+    section.innerHTML = `<div class="error-banner">Could not load report: ${escapeHtml(e.message)}</div>`;
+  }
+}
+
+loadDetail();
+loadTrend();
+loadHistory();
+</script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Code & SQL Practice</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  textarea.codebox {
+    font-family: "Cascadia Code", Consolas, "Courier New", monospace;
+    font-size: 13.5px;
+    min-height: 220px;
+    white-space: pre;
+    tab-size: 4;
+  }
+  .problem-pill { display: block; width: 100%; text-align: left; margin-bottom: 6px; }
+  .problem-pill.active { border-color: var(--accent); background: var(--bg-elev-2); }
+  .test-row { display:flex; justify-content: space-between; padding: 6px 8px; border-radius: 6px; margin-bottom:4px; font-size: 12.5px; }
+  .test-row.pass { background: rgba(62,207,142,.1); }
+  .test-row.fail { background: rgba(242,84,91,.1); }
+  .mode-toggle button.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="row" style="align-items:center;">
+    <h1 style="margin-bottom:0;">Code & SQL Practice</h1>
+    <div class="mode-toggle" style="flex:0 0 auto;">
+      <button id="modeCode" class="active">Python (DSA)</button>
+      <button id="modeSql">SQL</button>
+    </div>
+  </div>
+  <p class="subtitle">Solutions are graded by actually running your code / query - correctness isn't a guess.</p>
+
+  <div class="row">
+    <div style="flex: 0 0 260px;">
+      <div class="card" id="problemList"><span class="spinner"></span> Loading...</div>
+    </div>
+    <div style="flex: 1; min-width: 320px;">
+      <div class="card" id="detailPanel">
+        <p class="muted">Pick a problem from the list.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('practice.html');
+
+let mode = 'coding'; // 'coding' | 'sql'
+let problems = [];
+let currentProblem = null;
+
+async function loadProblems() {
+  const listEl = document.getElementById('problemList');
+  listEl.innerHTML = '<span class="spinner"></span> Loading...';
+  problems = await api(`/practice/${mode === 'coding' ? 'coding' : 'sql'}`);
+  listEl.innerHTML = problems.map((p) => `
+    <button class="ghost problem-pill" data-id="${p.id}">
+      <div>${escapeHtml(p.title)}</div>
+      <div class="muted small">${escapeHtml(p.topic)} &middot; ${p.difficulty}</div>
+    </button>
+  `).join('') || '<p class="muted small">No problems.</p>';
+
+  listEl.querySelectorAll('.problem-pill').forEach((btn) => {
+    btn.addEventListener('click', () => selectProblem(btn.dataset.id));
+  });
+}
+
+function selectProblem(id) {
+  currentProblem = problems.find((p) => p.id === id);
+  document.querySelectorAll('.problem-pill').forEach((b) => b.classList.toggle('active', b.dataset.id === id));
+  renderDetail();
+}
+
+function renderDetail() {
+  const p = currentProblem;
+  const panel = document.getElementById('detailPanel');
+  if (mode === 'coding') {
+    panel.innerHTML = `
+      <h2 style="margin-bottom:4px;">${escapeHtml(p.title)}</h2>
+      <p class="muted small">${escapeHtml(p.topic)} &middot; ${p.difficulty}</p>
+      <p>${escapeHtml(p.prompt)}</p>
+      <div class="field">
+        <label>Example test cases</label>
+        <div class="transcript-box small">${p.testCases.map(t => `${JSON.stringify(t.input)} &rarr; ${JSON.stringify(t.expected)}`).join('<br/>')}</div>
+      </div>
+      <div class="field">
+        <label>Your code</label>
+        <textarea class="codebox" id="codeInput">${escapeHtml(p.starterCode)}</textarea>
+      </div>
+      <div class="actions">
+        <button class="primary" id="submitBtn">Run & Submit</button>
+      </div>
+      <div id="resultArea"></div>
+    `;
+    document.getElementById('submitBtn').addEventListener('click', submitCoding);
+  } else {
+    panel.innerHTML = `
+      <h2 style="margin-bottom:4px;">${escapeHtml(p.title)}</h2>
+      <p class="muted small">${escapeHtml(p.topic)} &middot; ${p.difficulty}</p>
+      <p>${escapeHtml(p.prompt)}</p>
+      <div class="field">
+        <label>Schema</label>
+        <div class="transcript-box small">${escapeHtml(p.schemaDescription)}</div>
+      </div>
+      <div class="field">
+        <label>Your query</label>
+        <textarea class="codebox" id="codeInput" placeholder="SELECT ..."></textarea>
+      </div>
+      <div class="actions">
+        <button class="primary" id="submitBtn">Run & Submit</button>
+      </div>
+      <div id="resultArea"></div>
+    `;
+    document.getElementById('submitBtn').addEventListener('click', submitSql);
+  }
+}
+
+function scoreBox(label, val) {
+  return `<div class="score-box"><div class="num badge ${scoreClass(val)}" style="font-size:20px;border:none;background:none;padding:0;">${val}/10</div><div class="label">${label}</div></div>`;
+}
+
+async function submitCoding() {
+  const code = document.getElementById('codeInput').value;
+  const resultArea = document.getElementById('resultArea');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Running...';
+  resultArea.innerHTML = '<div class="row" style="align-items:center; gap:8px;"><span class="spinner"></span> Running your code against the test cases and getting AI feedback - this can take 10-20 seconds...</div>';
+  try {
+    const result = await api(`/practice/coding/${currentProblem.id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ code }),
+    });
+    if (result.runError) {
+      resultArea.innerHTML = `<div class="error-banner">${escapeHtml(result.runError)}</div>`;
+    } else {
+      resultArea.innerHTML = `
+        <h3>Results: ${result.passed}/${result.total} tests passed</h3>
+        ${result.testResults.map((t, i) => `
+          <div class="test-row ${t.passed ? 'pass' : 'fail'}">
+            <span>Test ${i + 1}: input=${JSON.stringify(t.input)}</span>
+            <span>${t.passed ? 'PASS' : `FAIL (got ${JSON.stringify(t.actual)}, expected ${JSON.stringify(t.expected)}${t.error ? ', error: ' + escapeHtml(t.error) : ''})`}</span>
+          </div>
+        `).join('')}
+        ${result.review ? `
+          <div class="score-grid">
+            ${scoreBox('Code Quality', result.review.codeQualityScore)}
+            ${scoreBox('Efficiency', result.review.efficiencyScore)}
+          </div>
+          <p class="small muted">Time: ${escapeHtml(result.review.timeComplexity)} &middot; Space: ${escapeHtml(result.review.spaceComplexity)}</p>
+          <p style="font-style:italic;">"${escapeHtml(result.review.interviewerRemark)}"</p>
+          <h3>Strengths</h3><ul class="clean">${result.review.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+          <h3>Edge cases missed</h3><ul class="clean">${result.review.edgeCasesMissed.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">None noted.</li>'}</ul>
+          <h3>Suggestions</h3><ul class="clean">${result.review.suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+        ` : ''}
+        <h3>Approach notes</h3>
+        <div class="card" style="background:var(--bg-elev-2); margin-bottom:0;">${escapeHtml(result.solutionNote)}</div>
+      `;
+    }
+  } catch (e) {
+    resultArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Run & Submit';
+}
+
+async function submitSql() {
+  const query = document.getElementById('codeInput').value;
+  const resultArea = document.getElementById('resultArea');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Running...';
+  resultArea.innerHTML = '<div class="row" style="align-items:center; gap:8px;"><span class="spinner"></span> Running your query and getting AI feedback - this can take 10-20 seconds...</div>';
+  try {
+    const result = await api(`/practice/sql/${currentProblem.id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ query }),
+    });
+    resultArea.innerHTML = `
+      <h3>${result.error ? 'Query error' : result.matched ? 'Correct - result matched' : 'Result did not match'}</h3>
+      ${result.error ? `<div class="error-banner">${escapeHtml(result.error)}</div>` : `
+        <div class="row">
+          <div>
+            <h3>Your result (sample)</h3>
+            <div class="transcript-box small">${JSON.stringify((result.actualRows || []).slice(0,5), null, 1)}</div>
+          </div>
+          <div>
+            <h3>Expected (sample)</h3>
+            <div class="transcript-box small">${JSON.stringify((result.expectedRows || []).slice(0,5), null, 1)}</div>
+          </div>
+        </div>
+      `}
+      ${result.review ? `
+        <div class="score-grid">
+          ${scoreBox('Style', result.review.styleScore)}
+          ${scoreBox('Efficiency', result.review.efficiencyScore)}
+        </div>
+        <p style="font-style:italic;">"${escapeHtml(result.review.interviewerRemark)}"</p>
+        <h3>Strengths</h3><ul class="clean">${result.review.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+        <h3>Issues</h3><ul class="clean">${result.review.issues.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">None noted.</li>'}</ul>
+        <h3>Recommended query</h3>
+        <div class="card" style="background:var(--bg-elev-2); margin-bottom:0; font-family: monospace; white-space: pre-wrap;">${escapeHtml(result.review.recommendedQuery)}</div>
+      ` : ''}
+    `;
+  } catch (e) {
+    resultArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Run & Submit';
+}
+
+document.getElementById('modeCode').addEventListener('click', () => {
+  mode = 'coding';
+  document.getElementById('modeCode').classList.add('active');
+  document.getElementById('modeSql').classList.remove('active');
+  currentProblem = null;
+  document.getElementById('detailPanel').innerHTML = '<p class="muted">Pick a problem from the list.</p>';
+  loadProblems();
+});
+document.getElementById('modeSql').addEventListener('click', () => {
+  mode = 'sql';
+  document.getElementById('modeSql').classList.add('active');
+  document.getElementById('modeCode').classList.remove('active');
+  currentProblem = null;
+  document.getElementById('detailPanel').innerHTML = '<p class="muted">Pick a problem from the list.</p>';
+  loadProblems();
+});
+
+// Deep-link support: practice.html?category=SQL or ?category=Coding%20%26%20DSA
+(function initFromQuery() {
+  const cat = qparam('category');
+  if (cat && cat.toLowerCase().includes('sql')) {
+    mode = 'sql';
+    document.getElementById('modeSql').classList.add('active');
+    document.getElementById('modeCode').classList.remove('active');
+  }
+})();
+
+loadProblems();
+</script>
+</body>
+</html>

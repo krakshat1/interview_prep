@@ -1,0 +1,405 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Resume Builder</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  .block { border: 1px solid var(--border); border-radius: 8px; padding: 14px; margin-bottom: 12px; background: var(--bg-elev-2); }
+  .block-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; }
+  .bullet-row { display: flex; gap: 8px; margin-bottom: 6px; align-items: flex-start; }
+  .bullet-row textarea { flex: 1; min-height: 44px; }
+  .bullet-row .bullet-actions { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; }
+  .improve-note { font-size: 12px; color: var(--accent); margin: 4px 0 8px; font-style: italic; }
+  #printArea { display: none; }
+  @media print {
+    body * { visibility: hidden; }
+    #printArea, #printArea * { visibility: visible; }
+    #printArea { display: block; position: absolute; top: 0; left: 0; width: 100%; color: #000; background: #fff; padding: 20px; }
+    #printArea h1, #printArea h2, #printArea h3, #printArea p, #printArea li { color: #000; }
+  }
+  .print-resume { color: #111; }
+  .print-resume h1 { margin-bottom: 2px; }
+  .print-resume h3 { color: #444; border-bottom: 1px solid #ccc; padding-bottom: 3px; margin-top: 16px; }
+  .print-resume .entry { margin-bottom: 10px; }
+  .print-resume .entry-title { font-weight: 600; }
+  .print-resume .entry-sub { color: #555; font-size: 13px; }
+  .print-resume ul { margin: 4px 0 0; padding-left: 18px; }
+</style>
+</head>
+<body>
+<div class="app-shell" id="appShell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1 style="margin-bottom:0;">Resume Builder</h1>
+  <p class="subtitle">Write it, let the AI sharpen each line, then get a holistic recruiter-style review before you export.</p>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Target role (helps the AI tailor suggestions)</label>
+        <input type="text" id="targetRole" placeholder="e.g. Machine Learning Engineer, Data Scientist" />
+      </div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Full name</label><input type="text" id="c_name" /></div>
+      <div class="field"><label>Email</label><input type="text" id="c_email" /></div>
+    </div>
+    <div class="row">
+      <div class="field"><label>Phone</label><input type="text" id="c_phone" /></div>
+      <div class="field"><label>Location</label><input type="text" id="c_location" /></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="block-header"><h3 style="margin:0;">Summary</h3></div>
+    <div class="field"><textarea id="summary" rows="3" placeholder="2-3 sentence professional summary..."></textarea></div>
+    <div id="summaryNote"></div>
+    <div class="actions"><button id="improveSummaryBtn">Improve with AI</button></div>
+  </div>
+
+  <div class="card">
+    <div class="block-header"><h3 style="margin:0;">Experience</h3><button id="addExpBtn">+ Add role</button></div>
+    <div id="experienceList"></div>
+  </div>
+
+  <div class="card">
+    <div class="block-header"><h3 style="margin:0;">Projects</h3><button id="addProjBtn">+ Add project</button></div>
+    <div id="projectsList"></div>
+  </div>
+
+  <div class="card">
+    <div class="block-header"><h3 style="margin:0;">Education</h3><button id="addEduBtn">+ Add education</button></div>
+    <div id="educationList"></div>
+  </div>
+
+  <div class="card">
+    <h3 style="margin-top:0;">Skills</h3>
+    <div class="field"><label>Comma-separated</label><input type="text" id="skills" placeholder="Python, SQL, PyTorch, AWS, ..." /></div>
+  </div>
+
+  <div class="card">
+    <div class="actions">
+      <button class="primary" id="saveBtn">Save draft</button>
+      <button id="reviewBtn">Get overall feedback</button>
+      <button id="previewBtn">Preview / Export</button>
+    </div>
+    <div id="saveMsg"></div>
+  </div>
+
+  <div class="card" id="reviewCard" style="display:none;"></div>
+</div>
+
+<div id="printArea"></div>
+
+<script src="shared.js"></script>
+<script>
+renderNav('resumebuilder.html');
+
+let draft = {
+  contact: { name: '', email: '', phone: '', location: '', links: [] },
+  targetRole: '',
+  summary: '',
+  experience: [],
+  education: [],
+  skills: [],
+  projects: [],
+};
+
+function newId() { return 'id' + Math.random().toString(36).slice(2, 10); }
+
+function renderExperience() {
+  const el = document.getElementById('experienceList');
+  el.innerHTML = draft.experience.map((exp, i) => `
+    <div class="block" data-exp="${exp.id}">
+      <div class="block-header">
+        <strong>Role ${i + 1}</strong>
+        <button class="danger small" data-remove-exp="${exp.id}">Remove</button>
+      </div>
+      <div class="row">
+        <div class="field"><label>Company</label><input type="text" data-exp-field="company" value="${escapeHtml(exp.company)}" /></div>
+        <div class="field"><label>Title</label><input type="text" data-exp-field="title" value="${escapeHtml(exp.title)}" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Start date</label><input type="text" data-exp-field="startDate" value="${escapeHtml(exp.startDate)}" placeholder="e.g. Jan 2023" /></div>
+        <div class="field"><label>End date</label><input type="text" data-exp-field="endDate" value="${escapeHtml(exp.endDate)}" placeholder="e.g. Present" /></div>
+      </div>
+      <label>Bullet points</label>
+      <div class="bullets" data-bullets></div>
+      <button class="ghost small" data-add-bullet>+ Add bullet</button>
+    </div>
+  `).join('') || '<p class="muted small">No roles added yet.</p>';
+
+  draft.experience.forEach((exp) => renderBullets(el.querySelector(`[data-exp="${exp.id}"] [data-bullets]`), exp.bullets, (idx, val) => { exp.bullets[idx] = val; }, (idx) => { exp.bullets.splice(idx, 1); renderExperience(); }));
+
+  el.querySelectorAll('[data-exp-field]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const exp = draft.experience.find((x) => x.id === input.closest('[data-exp]').dataset.exp);
+      exp[input.dataset.expField] = input.value;
+    });
+  });
+  el.querySelectorAll('[data-remove-exp]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      draft.experience = draft.experience.filter((x) => x.id !== btn.dataset.removeExp);
+      renderExperience();
+    });
+  });
+  el.querySelectorAll('[data-add-bullet]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const exp = draft.experience.find((x) => x.id === btn.closest('[data-exp]').dataset.exp);
+      exp.bullets.push('');
+      renderExperience();
+    });
+  });
+}
+
+function renderBullets(container, bullets, onChange, onRemove) {
+  if (!container) return;
+  container.innerHTML = bullets.map((b, i) => `
+    <div class="bullet-row" data-bullet-idx="${i}">
+      <textarea>${escapeHtml(b)}</textarea>
+      <div class="bullet-actions">
+        <button class="ghost small" data-improve-bullet="${i}">Improve</button>
+        <button class="danger small" data-remove-bullet="${i}">&times;</button>
+      </div>
+    </div>
+    <div class="improve-note" data-improve-note="${i}"></div>
+  `).join('');
+
+  container.querySelectorAll('textarea').forEach((ta, i) => {
+    ta.addEventListener('input', () => onChange(i, ta.value));
+  });
+  container.querySelectorAll('[data-remove-bullet]').forEach((btn) => {
+    btn.addEventListener('click', () => onRemove(Number(btn.dataset.removeBullet)));
+  });
+  container.querySelectorAll('[data-improve-bullet]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const idx = Number(btn.dataset.improveBullet);
+      const ta = container.querySelectorAll('textarea')[idx];
+      const note = container.querySelector(`[data-improve-note="${idx}"]`);
+      const original = ta.value.trim();
+      if (!original) return;
+      btn.disabled = true; btn.textContent = '...';
+      try {
+        const result = await api('/resumebuilder/improve', {
+          method: 'POST',
+          body: JSON.stringify({ text: original, sectionType: 'resume bullet', targetRole: draft.targetRole }),
+        });
+        ta.value = result.improved;
+        onChange(idx, result.improved);
+        note.innerHTML = `${escapeHtml(result.reasoning)}`;
+      } catch (e) {
+        note.innerHTML = `<span style="color:var(--bad);">${escapeHtml(e.message)}</span>`;
+      }
+      btn.disabled = false; btn.textContent = 'Improve';
+    });
+  });
+}
+
+function renderProjects() {
+  const el = document.getElementById('projectsList');
+  el.innerHTML = draft.projects.map((proj, i) => `
+    <div class="block" data-proj="${proj.id}">
+      <div class="block-header">
+        <strong>Project ${i + 1}</strong>
+        <button class="danger small" data-remove-proj="${proj.id}">Remove</button>
+      </div>
+      <div class="row">
+        <div class="field"><label>Name</label><input type="text" data-proj-field="name" value="${escapeHtml(proj.name)}" /></div>
+        <div class="field"><label>Link (optional)</label><input type="text" data-proj-field="link" value="${escapeHtml(proj.link || '')}" /></div>
+      </div>
+      <label>Bullet points</label>
+      <div class="bullets" data-bullets></div>
+      <button class="ghost small" data-add-bullet>+ Add bullet</button>
+    </div>
+  `).join('') || '<p class="muted small">No projects added yet.</p>';
+
+  draft.projects.forEach((proj) => renderBullets(el.querySelector(`[data-proj="${proj.id}"] [data-bullets]`), proj.bullets, (idx, val) => { proj.bullets[idx] = val; }, (idx) => { proj.bullets.splice(idx, 1); renderProjects(); }));
+
+  el.querySelectorAll('[data-proj-field]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const proj = draft.projects.find((x) => x.id === input.closest('[data-proj]').dataset.proj);
+      proj[input.dataset.projField] = input.value;
+    });
+  });
+  el.querySelectorAll('[data-remove-proj]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      draft.projects = draft.projects.filter((x) => x.id !== btn.dataset.removeProj);
+      renderProjects();
+    });
+  });
+  el.querySelectorAll('[data-add-bullet]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const proj = draft.projects.find((x) => x.id === btn.closest('[data-proj]').dataset.proj);
+      proj.bullets.push('');
+      renderProjects();
+    });
+  });
+}
+
+function renderEducation() {
+  const el = document.getElementById('educationList');
+  el.innerHTML = draft.education.map((edu, i) => `
+    <div class="block" data-edu="${edu.id}">
+      <div class="block-header">
+        <strong>Education ${i + 1}</strong>
+        <button class="danger small" data-remove-edu="${edu.id}">Remove</button>
+      </div>
+      <div class="row">
+        <div class="field"><label>School</label><input type="text" data-edu-field="school" value="${escapeHtml(edu.school)}" /></div>
+        <div class="field"><label>Degree</label><input type="text" data-edu-field="degree" value="${escapeHtml(edu.degree)}" /></div>
+      </div>
+      <div class="row">
+        <div class="field"><label>Start date</label><input type="text" data-edu-field="startDate" value="${escapeHtml(edu.startDate)}" /></div>
+        <div class="field"><label>End date</label><input type="text" data-edu-field="endDate" value="${escapeHtml(edu.endDate)}" /></div>
+      </div>
+    </div>
+  `).join('') || '<p class="muted small">No education added yet.</p>';
+
+  el.querySelectorAll('[data-edu-field]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const edu = draft.education.find((x) => x.id === input.closest('[data-edu]').dataset.edu);
+      edu[input.dataset.eduField] = input.value;
+    });
+  });
+  el.querySelectorAll('[data-remove-edu]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      draft.education = draft.education.filter((x) => x.id !== btn.dataset.removeEdu);
+      renderEducation();
+    });
+  });
+}
+
+function renderAll() {
+  document.getElementById('targetRole').value = draft.targetRole || '';
+  document.getElementById('c_name').value = draft.contact.name || '';
+  document.getElementById('c_email').value = draft.contact.email || '';
+  document.getElementById('c_phone').value = draft.contact.phone || '';
+  document.getElementById('c_location').value = draft.contact.location || '';
+  document.getElementById('summary').value = draft.summary || '';
+  document.getElementById('skills').value = (draft.skills || []).join(', ');
+  renderExperience();
+  renderProjects();
+  renderEducation();
+}
+
+function syncSimpleFields() {
+  draft.targetRole = document.getElementById('targetRole').value;
+  draft.contact.name = document.getElementById('c_name').value;
+  draft.contact.email = document.getElementById('c_email').value;
+  draft.contact.phone = document.getElementById('c_phone').value;
+  draft.contact.location = document.getElementById('c_location').value;
+  draft.summary = document.getElementById('summary').value;
+  draft.skills = document.getElementById('skills').value.split(',').map((s) => s.trim()).filter(Boolean);
+}
+
+document.getElementById('addExpBtn').addEventListener('click', () => {
+  draft.experience.push({ id: newId(), company: '', title: '', startDate: '', endDate: '', bullets: [''] });
+  renderExperience();
+});
+document.getElementById('addProjBtn').addEventListener('click', () => {
+  draft.projects.push({ id: newId(), name: '', link: '', bullets: [''] });
+  renderProjects();
+});
+document.getElementById('addEduBtn').addEventListener('click', () => {
+  draft.education.push({ id: newId(), school: '', degree: '', startDate: '', endDate: '' });
+  renderEducation();
+});
+
+document.getElementById('improveSummaryBtn').addEventListener('click', async () => {
+  const ta = document.getElementById('summary');
+  const note = document.getElementById('summaryNote');
+  const original = ta.value.trim();
+  if (!original) return;
+  const btn = document.getElementById('improveSummaryBtn');
+  btn.disabled = true; btn.textContent = 'Improving...';
+  try {
+    const result = await api('/resumebuilder/improve', {
+      method: 'POST',
+      body: JSON.stringify({ text: original, sectionType: 'professional summary', targetRole: document.getElementById('targetRole').value }),
+    });
+    ta.value = result.improved;
+    draft.summary = result.improved;
+    note.innerHTML = `<p class="improve-note">${escapeHtml(result.reasoning)}</p>`;
+  } catch (e) {
+    note.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Improve with AI';
+});
+
+document.getElementById('saveBtn').addEventListener('click', async () => {
+  syncSimpleFields();
+  const msg = document.getElementById('saveMsg');
+  try {
+    await api('/resumebuilder/draft', { method: 'PUT', body: JSON.stringify(draft) });
+    msg.innerHTML = '<p class="muted small">Saved.</p>';
+    setTimeout(() => { msg.innerHTML = ''; }, 2500);
+  } catch (e) {
+    msg.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+});
+
+document.getElementById('reviewBtn').addEventListener('click', async () => {
+  syncSimpleFields();
+  const card = document.getElementById('reviewCard');
+  card.style.display = 'block';
+  card.innerHTML = '<span class="spinner"></span> Saving draft and getting a recruiter-style review - this can take 10-20 seconds...';
+  try {
+    await api('/resumebuilder/draft', { method: 'PUT', body: JSON.stringify(draft) });
+    const r = await api('/resumebuilder/review', { method: 'POST' });
+    card.innerHTML = `
+      <h2 style="margin-bottom:4px;">Recruiter-style review: ${r.overallScore}/10</h2>
+      <h3>Strengths</h3><ul class="clean">${r.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+      <h3>Gaps</h3><ul class="clean">${r.gaps.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">None noted.</li>'}</ul>
+      <h3>Keywords missing for this target role</h3>
+      <div class="chip-list">${r.missingKeywords.map(k => `<span class="chip">${escapeHtml(k)}</span>`).join('') || '<span class="muted small">None noted.</span>'}</div>
+      <h3>Suggestions</h3><ul class="clean">${r.suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+    `;
+  } catch (e) {
+    card.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+});
+
+document.getElementById('previewBtn').addEventListener('click', () => {
+  syncSimpleFields();
+  const d = draft;
+  const printArea = document.getElementById('printArea');
+  printArea.innerHTML = `
+    <div class="print-resume">
+      <h1>${escapeHtml(d.contact.name || 'Your Name')}</h1>
+      <div class="entry-sub">${[d.contact.email, d.contact.phone, d.contact.location].filter(Boolean).map(escapeHtml).join(' &middot; ')}</div>
+      ${d.summary ? `<p>${escapeHtml(d.summary)}</p>` : ''}
+      ${d.experience.length ? `<h3>Experience</h3>${d.experience.map(exp => `
+        <div class="entry">
+          <div class="entry-title">${escapeHtml(exp.title)} - ${escapeHtml(exp.company)}</div>
+          <div class="entry-sub">${escapeHtml(exp.startDate)} - ${escapeHtml(exp.endDate)}</div>
+          <ul>${exp.bullets.filter(Boolean).map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>
+        </div>`).join('')}` : ''}
+      ${d.projects.length ? `<h3>Projects</h3>${d.projects.map(proj => `
+        <div class="entry">
+          <div class="entry-title">${escapeHtml(proj.name)}${proj.link ? ` (${escapeHtml(proj.link)})` : ''}</div>
+          <ul>${proj.bullets.filter(Boolean).map(b => `<li>${escapeHtml(b)}</li>`).join('')}</ul>
+        </div>`).join('')}` : ''}
+      ${d.education.length ? `<h3>Education</h3>${d.education.map(edu => `
+        <div class="entry">
+          <div class="entry-title">${escapeHtml(edu.degree)} - ${escapeHtml(edu.school)}</div>
+          <div class="entry-sub">${escapeHtml(edu.startDate)} - ${escapeHtml(edu.endDate)}</div>
+        </div>`).join('')}` : ''}
+      ${d.skills.length ? `<h3>Skills</h3><p>${d.skills.map(escapeHtml).join(', ')}</p>` : ''}
+    </div>
+  `;
+  window.print();
+});
+
+(async function init() {
+  try {
+    const loaded = await api('/resumebuilder/draft');
+    if (loaded) draft = { ...draft, ...loaded, contact: { ...draft.contact, ...(loaded.contact || {}) } };
+  } catch (e) {}
+  renderAll();
+})();
+</script>
+</body>
+</html>

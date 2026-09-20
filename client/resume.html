@@ -1,0 +1,76 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Resume Defense</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Resume-Based Interview Prep</h1>
+  <p class="subtitle">Paste your resume. The AI generates pointed questions from every substantive claim on it, then adds them to your question bank under "Resume-Based" so you can mock-interview on them like any other topic.</p>
+
+  <div class="card">
+    <div class="field">
+      <label>Resume text</label>
+      <textarea id="resumeText" rows="14" placeholder="Paste your full resume text here..."></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="genBtn">Generate resume-defense questions</button>
+    </div>
+    <div id="msgArea"></div>
+  </div>
+
+  <div id="resultArea"></div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('resume.html');
+
+(async function prefill() {
+  try {
+    const profile = await api('/profile');
+    if (profile?.resumeText) document.getElementById('resumeText').value = profile.resumeText;
+  } catch (e) {}
+})();
+
+document.getElementById('genBtn').addEventListener('click', async () => {
+  const resumeText = document.getElementById('resumeText').value.trim();
+  const btn = document.getElementById('genBtn');
+  const msgArea = document.getElementById('msgArea');
+  const resultArea = document.getElementById('resultArea');
+  msgArea.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Analyzing resume...';
+  try {
+    const result = await api('/resume/questions', {
+      method: 'POST',
+      body: JSON.stringify({ resumeText }),
+    });
+    resultArea.innerHTML = `
+      <div class="card">
+        <h2>${result.count} questions added to your question bank (category: Resume-Based)</h2>
+        <table>
+          <thead><tr><th>Question</th><th>Difficulty</th></tr></thead>
+          <tbody>
+            ${result.questions.map(q => `<tr><td>${escapeHtml(q.question)}</td><td><span class="badge">${q.difficulty}</span></td></tr>`).join('')}
+          </tbody>
+        </table>
+        <div class="actions">
+          <a href="index.html?category=${encodeURIComponent('Resume-Based')}"><button class="primary">Start a mock interview on these</button></a>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    msgArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Generate resume-defense questions';
+});
+</script>
+</body>
+</html>

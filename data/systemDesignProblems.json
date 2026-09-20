@@ -1,0 +1,325 @@
+[
+  {
+    "id": "sysdes-001",
+    "title": "Design a URL Shortener",
+    "topic": "Fundamentals",
+    "difficulty": "Beginner",
+    "prompt": "Design a service like bit.ly: users submit a long URL and get back a short one; visiting the short URL redirects to the original. Design the system end to end.",
+    "functionalRequirements": [
+      "Given a long URL, generate a unique short URL",
+      "Visiting the short URL redirects (HTTP 301/302) to the original long URL",
+      "Optionally let users pick a custom alias, and optionally set an expiration date"
+    ],
+    "nonFunctionalRequirements": [
+      "Reads (redirects) vastly outnumber writes (shortens) - design for a read-heavy workload",
+      "Redirect latency should be very low (this sits on the critical path of every click)",
+      "Short codes must not collide",
+      "System should handle at least 100M new URLs/month and far more redirects"
+    ],
+    "clarifyingQuestions": [
+      "What's the expected read:write ratio, and total scale?",
+      "Do short URLs need to be unguessable/random, or is sequential fine?",
+      "Do we need custom aliases or expiration?",
+      "Do we need click analytics?"
+    ],
+    "evaluationFocus": [
+      "Short-code generation strategy (counter+base62 vs hash vs random) and collision handling",
+      "Read-heavy scaling: caching layer, CDN/edge redirect",
+      "Database choice and schema for a simple key-value-shaped lookup at scale"
+    ],
+    "referenceApproach": "Generate short codes with a base62-encoded auto-incrementing counter (sharded via a range-allocation service, e.g. each app server reserves a block of IDs) rather than hashing the URL - this guarantees no collisions without a uniqueness check on write. Store the mapping in a key-value store (DynamoDB/Cassandra) keyed by short code, since lookups are pure key->value with no relational needs. Because reads dominate, put a cache (Redis) in front of the DB and, for true scale, push redirects to the CDN/edge so most requests never reach the origin. Writes go through an API service that reserves an ID, writes the mapping, and returns the short URL. For custom aliases, check availability against the same table before insert. Expiration can be a TTL field checked at read time or swept by a background job. The main trade-off to articulate: hash-based codes are stateless and horizontally trivial but need collision checks; counter-based codes need coordinated ID allocation but guarantee uniqueness for free.",
+    "solutionNote": "The core insight is recognizing this as an extreme read:write ratio problem - the design should be judged mostly on how aggressively it caches/edges the redirect path, not on the shortening logic."
+  },
+  {
+    "id": "sysdes-002",
+    "title": "Design a Rate Limiter",
+    "topic": "Infrastructure",
+    "difficulty": "Beginner",
+    "prompt": "Design a rate limiter that can be dropped in front of an API to limit each client to N requests per time window (e.g. 100 requests/minute per API key), used consistently across many API servers.",
+    "functionalRequirements": [
+      "Limit requests per client (by API key/user ID/IP) to a configurable threshold per time window",
+      "Reject or queue requests over the limit with a clear signal (e.g. HTTP 429 + Retry-After)",
+      "Support different limits for different clients/endpoints"
+    ],
+    "nonFunctionalRequirements": [
+      "The limiter itself must add minimal latency to every request",
+      "Limits must be enforced consistently across many stateless API server instances, not per-instance",
+      "Should degrade gracefully (fail open or fail closed - state which and why) if the limiter's own storage is unavailable"
+    ],
+    "clarifyingQuestions": [
+      "Is this enforced at a single load balancer/gateway, or across a fleet of API servers that all need to share state?",
+      "Fixed window, sliding window, or token bucket - does the business care about burst tolerance?",
+      "What should happen if the shared counter store goes down - block everything or allow everything?"
+    ],
+    "evaluationFocus": [
+      "Algorithm choice (fixed window vs sliding window vs token/leaky bucket) and its edge-case behavior at window boundaries",
+      "Where the counter state lives given multiple stateless servers (shared store, not local memory)",
+      "Latency/availability trade-off of the shared store on the hot path"
+    ],
+    "referenceApproach": "Use a token bucket (or sliding-window-log/sliding-window-counter) algorithm rather than naive fixed windows, since fixed windows allow up to 2x the limit right at a window boundary (a burst at 0:59 and another at 1:00). Store each client's counter/bucket state in a fast shared store like Redis, using an atomic INCR+EXPIRE (or a Lua script for compound operations) so concurrent requests across API servers see consistent state without races. Each API server, before handling a request, checks/decrements the client's bucket in Redis synchronously - this adds one network round-trip, which is acceptable since Redis is sub-millisecond, but is the latency cost worth calling out explicitly. For resilience, decide explicitly: fail open (allow requests) if Redis is unreachable, prioritizing availability, or fail closed (reject), prioritizing protection of downstream systems - a real interview wants you to state this trade-off and justify a choice given the stated use case. At very high scale, shard the rate-limit store by client key and consider a local in-memory cache with short TTL to absorb some load, accepting slightly relaxed accuracy.",
+    "solutionNote": "The algorithm choice is secondary to correctly identifying that stateless servers need a shared, atomic counter store, and to explicitly deciding the fail-open vs fail-closed trade-off rather than ignoring it."
+  },
+  {
+    "id": "sysdes-003",
+    "title": "Design a Pastebin / Text-Sharing Service",
+    "topic": "Fundamentals",
+    "difficulty": "Beginner",
+    "prompt": "Design a service like Pastebin: users paste text (up to a few MB), get a shareable link, and anyone with the link can view (and optionally the content expires or is set to burn-after-reading).",
+    "functionalRequirements": [
+      "Submit text and receive a unique shareable URL",
+      "Retrieve the text via that URL",
+      "Optional: expiration time, or delete-after-first-view"
+    ],
+    "nonFunctionalRequirements": [
+      "Pastes can be up to a few MB - large enough that storing raw text inline in every DB row matters",
+      "Read-heavy, similar shape to the URL shortener, but payloads are much larger",
+      "Durability - a shared paste shouldn't silently disappear before its expiration"
+    ],
+    "clarifyingQuestions": [
+      "What's the max paste size, and does that change the storage approach?",
+      "Do we need syntax highlighting/metadata, or just raw text?",
+      "Is there an expected traffic pattern (viral pastes causing spiky read load on one key)?"
+    ],
+    "evaluationFocus": [
+      "Separating metadata (small, relational-ish) from blob content (large, better in object storage)",
+      "Handling a 'hot key' - one viral paste getting disproportionate read traffic",
+      "Short ID generation, similar to URL shortener, applied here"
+    ],
+    "referenceApproach": "Split storage into two tiers: a metadata table (ID, creation time, expiration, size, content-type) in a regular database, and the actual text blob in object storage (S3-like), with the metadata row pointing at the blob key. This avoids bloating the database with large text blobs and lets you serve blobs directly from object storage/CDN for reads. Generate IDs the same way as a URL shortener (counter+base62 or random). For a viral 'hot key' paste, a CDN in front of the blob store absorbs the read spike without touching origin infrastructure at all. Expiration is enforced by checking a TTL field on read and by a background sweeper job that deletes expired blobs to reclaim storage (relying only on read-time checks would leak storage forever for pastes nobody revisits). Burn-after-reading needs a conditional-delete-on-read operation, which requires care to avoid a race where two simultaneous reads both succeed before the delete completes - a compare-and-delete or a distributed lock on the ID handles this correctly.",
+    "solutionNote": "The key differentiator from a plain URL shortener is recognizing that large payloads belong in object storage, not a relational row, and explicitly handling the hot-key/viral-read case."
+  },
+  {
+    "id": "sysdes-004",
+    "title": "Design a News Feed",
+    "topic": "Distributed Systems",
+    "difficulty": "Intermediate",
+    "prompt": "Design the news feed for a social network: each user follows other users, and their feed shows recent posts from everyone they follow, ranked roughly by recency.",
+    "functionalRequirements": [
+      "Users can post content and follow other users",
+      "A user's feed shows posts from everyone they follow, most-recent-ish first",
+      "Feed should load quickly even for users following thousands of accounts, and for celebrity accounts with millions of followers"
+    ],
+    "nonFunctionalRequirements": [
+      "Feed reads must be fast (this is the app's most-loaded endpoint)",
+      "Write volume is much lower than read volume, but a single celebrity post can fan out to millions of feeds",
+      "Eventual consistency for feed freshness is acceptable (a few seconds of delay is fine)"
+    ],
+    "clarifyingQuestions": [
+      "Are there celebrity/high-follower accounts we need to special-case?",
+      "Does ranking need to be more than recency (engagement-based ranking), or is this out of scope?",
+      "How stale can a feed be after someone new posts?"
+    ],
+    "evaluationFocus": [
+      "Fan-out-on-write vs fan-out-on-read, and explicitly handling the celebrity/hot-user problem with a hybrid",
+      "Precomputed feed storage design (per-user feed cache) vs computing on demand",
+      "Consistency/staleness trade-offs stated explicitly"
+    ],
+    "referenceApproach": "The standard approach is fan-out-on-write: when a user posts, a background job pushes that post's ID into the precomputed feed (a capped list in Redis or a wide-column store) of every follower, so reading a feed is just one fast lookup. This breaks down for celebrity accounts with millions of followers (fanning out one post to 10M feeds is expensive and slow), so a hybrid is used: for normal users, fan out on write; for high-follower accounts, don't fan out - instead merge their posts into a viewer's feed at read time (fan-out-on-read), since a celebrity's post count is tiny relative to the fan-out cost. Feed reads then merge the precomputed feed with a lookup of followed celebrities' recent posts, ranked by timestamp. Post content itself lives in a separate content store, keyed by post ID, so feeds only store lightweight references. Consistency is eventual by design - a few seconds of delay in fan-out is an acceptable, explicitly stated trade-off for write throughput and simplicity.",
+    "solutionNote": "The single most important thing to name unprompted is the celebrity fan-out problem and the fan-out-on-write/fan-out-on-read hybrid fix - most candidates only get fan-out-on-write and miss why it fails at the tail."
+  },
+  {
+    "id": "sysdes-005",
+    "title": "Design a Chat Application",
+    "topic": "Distributed Systems",
+    "difficulty": "Intermediate",
+    "prompt": "Design a real-time messaging app like WhatsApp: 1:1 and group chats, messages delivered in near real time, with delivery/read receipts and support for offline recipients.",
+    "functionalRequirements": [
+      "Send/receive messages in 1:1 and group chats in near real time",
+      "Message delivery persists and is delivered when an offline recipient comes back online",
+      "Delivered/read receipts",
+      "Message history is retrievable"
+    ],
+    "nonFunctionalRequirements": [
+      "Low latency for online users (near real time)",
+      "No message loss, even if a recipient is offline for days",
+      "Must scale to millions of concurrent connections"
+    ],
+    "clarifyingQuestions": [
+      "Do we need end-to-end encryption, or is that out of scope for this design?",
+      "What's the expected group size ceiling?",
+      "Do read receipts need to be real-time, or can they be slightly delayed?"
+    ],
+    "evaluationFocus": [
+      "Real-time transport choice (persistent connections via WebSockets, and why polling doesn't scale here)",
+      "Connection-to-server mapping at scale (a gateway/presence layer routing messages to the right server holding a user's connection)",
+      "Message durability and offline delivery via a per-user message queue/inbox"
+    ],
+    "referenceApproach": "Each client holds a persistent WebSocket connection to one of many stateless-ish 'chat gateway' servers; a presence/routing service tracks which gateway server holds each user's live connection (in Redis, keyed by user ID). Sending a message: the sender's gateway writes the message to durable storage (a per-conversation message log, e.g. in Cassandra, partitioned by conversation ID) first, guaranteeing durability even if delivery fails, then looks up the recipient's gateway via the presence service and pushes the message over that WebSocket if they're online. If offline, the message sits durably in storage and is delivered from the recipient's undelivered-message queue the moment they reconnect (their client syncs from a 'last seen message ID' checkpoint). Group chats fan out the same write to each member's delivery path rather than storing N copies of the message body - store one message row and reference it from each recipient's delivery queue. Read/delivery receipts are just another small event written back through the same pipe, updated asynchronously so they don't block message delivery.",
+    "solutionNote": "The key structural decision to get right is durability-before-delivery (write to storage first, then attempt push) - many candidates design it delivery-first and can't explain how offline recipients ever catch up."
+  },
+  {
+    "id": "sysdes-006",
+    "title": "Design a Notification System",
+    "topic": "Distributed Systems",
+    "difficulty": "Intermediate",
+    "prompt": "Design a notification system that many internal services can call to notify users via push, email, or SMS, with retries, rate limiting per user, and support for user notification preferences.",
+    "functionalRequirements": [
+      "Internal services submit a notification request (user, message, channel preference)",
+      "Deliver via push/email/SMS depending on user preference and channel availability",
+      "Retry failed deliveries with backoff; don't spam a user (per-user rate limiting/batching)"
+    ],
+    "nonFunctionalRequirements": [
+      "High write throughput from many internal callers, bursty (e.g. a mass notification to millions of users)",
+      "At-least-once delivery is acceptable; duplicates should be rare but tolerated by clients",
+      "Should not become a single point of failure for the services that call it - calling services should not block on delivery"
+    ],
+    "clarifyingQuestions": [
+      "Should the calling service get a synchronous success/fail response, or is fire-and-forget acceptable?",
+      "Do different notification types have different priority/urgency (e.g. security alert vs marketing)?",
+      "What happens if a third-party push/email/SMS provider is down?"
+    ],
+    "evaluationFocus": [
+      "Decoupling producers from delivery via a queue, so bursty internal callers don't get blocked",
+      "Per-channel worker pools with provider-specific retry/backoff and fallback channel logic",
+      "Idempotency/dedup to keep at-least-once delivery from becoming visible spam"
+    ],
+    "referenceApproach": "Calling services publish a notification request onto a message queue (Kafka/SQS) and get an immediate ack once it's queued - this decouples them from delivery latency and third-party outages entirely. A set of channel-specific worker pools (push workers, email workers, SMS workers) consume from the queue, look up the user's preferences and rate-limit state (in a fast store like Redis), and call the relevant third-party provider (APNs/FCM, an email service, an SMS gateway). Failed deliveries are retried with exponential backoff via a separate retry queue (or delayed-message feature of the queue), with a dead-letter queue after N attempts for manual/alerting follow-up. To avoid spamming a user, a per-user rate limiter (similar to the rate-limiter design) caps notifications per time window, and lower-priority notifications can be batched/digested rather than sent immediately. Idempotency keys (a unique ID per logical notification) let workers detect and skip duplicate deliveries safely under at-least-once semantics. If a provider is down, workers detect elevated error rates and either back off that channel or fall back to the user's secondary preferred channel.",
+    "solutionNote": "The core signal an interviewer is looking for is queue-based decoupling of producers from delivery, plus explicitly handling idempotency under at-least-once delivery - candidates who design this as a synchronous call chain miss the point."
+  },
+  {
+    "id": "sysdes-007",
+    "title": "Design a Web Crawler",
+    "topic": "Distributed Systems",
+    "difficulty": "Advanced",
+    "prompt": "Design a web crawler that starts from a set of seed URLs, discovers and fetches billions of pages, respects robots.txt and politeness, and avoids re-crawling the same content excessively.",
+    "functionalRequirements": [
+      "Given seed URLs, discover linked pages and crawl them recursively at scale",
+      "Respect robots.txt and per-domain crawl-rate politeness",
+      "Avoid infinite loops and re-fetching unchanged content excessively",
+      "Store fetched content for downstream processing (indexing, etc.)"
+    ],
+    "nonFunctionalRequirements": [
+      "Must scale horizontally to many worker machines crawling in parallel",
+      "Must be polite - never hammer a single domain regardless of overall crawler throughput",
+      "Must handle duplicate URLs and near-duplicate content efficiently at billions-of-pages scale"
+    ],
+    "clarifyingQuestions": [
+      "Is freshness (re-crawling changed pages) in scope, or just a first full crawl?",
+      "How do we prioritize which URLs to crawl next when the frontier is huge?",
+      "What counts as a duplicate - exact URL, or near-duplicate content?"
+    ],
+    "evaluationFocus": [
+      "URL frontier design that enforces per-domain politeness without starving other domains",
+      "Distributed dedup at scale (seen-URL and near-duplicate-content detection)",
+      "Horizontal scaling of fetch workers and how work is partitioned across them"
+    ],
+    "referenceApproach": "The URL frontier (the queue of URLs to crawl) is partitioned by domain into per-domain sub-queues, each with its own politeness throttle (min delay between requests to that domain, read from robots.txt), and a prioritization scheme (e.g. round-robin across domains, or a priority score) decides which domain's queue to pull from next - this is what prevents one huge domain from starving others or getting hammered. Seen-URL dedup at billions-of-pages scale uses a Bloom filter (probabilistic, memory-efficient, accepts a small false-positive rate) rather than storing every URL in a database, backed by a real store for the source of truth. Fetched pages are hashed (e.g. with a fingerprinting scheme like simhash for near-duplicates, not just exact hash) to detect and skip near-duplicate content without re-processing it downstream. Fetch workers are horizontally scaled and stateless, pulling batches of URLs from the frontier service, resolving DNS (with caching, since DNS lookups are a real bottleneck at this scale), fetching, extracting links, and pushing newly discovered URLs back into the frontier. Raw content is written to distributed object storage, partitioned/named for efficient downstream indexing access.",
+    "solutionNote": "The two things that separate a strong answer from a weak one: explicit per-domain politeness enforcement (not just 'a queue'), and a probabilistic dedup structure (Bloom filter) rather than assuming a lookup table scales for free at billions of URLs."
+  },
+  {
+    "id": "sysdes-008",
+    "title": "Design a Distributed Cache",
+    "topic": "Distributed Systems",
+    "difficulty": "Advanced",
+    "prompt": "Design a distributed, in-memory key-value cache (like Redis/Memcached at scale) that sits in front of a slower database, supporting get/set/delete, and scaling across many cache nodes.",
+    "functionalRequirements": [
+      "get(key), set(key, value, ttl), delete(key)",
+      "Data is distributed across many cache nodes, not held on a single machine",
+      "Cache misses fall through to the backing database and populate the cache"
+    ],
+    "nonFunctionalRequirements": [
+      "Sub-millisecond latency for hits",
+      "Must handle nodes joining/leaving (scaling out, or node failure) without a full cache-wide reshuffle",
+      "Must avoid a 'thundering herd' where a popular key's expiration causes many simultaneous DB hits"
+    ],
+    "clarifyingQuestions": [
+      "Is strict consistency with the backing DB required, or is brief staleness acceptable?",
+      "What's the value size distribution - mostly small values, or some large blobs?",
+      "How should we handle a hot key that gets disproportionate traffic?"
+    ],
+    "evaluationFocus": [
+      "Consistent hashing for key-to-node distribution and why it minimizes reshuffling on node changes",
+      "Cache invalidation/consistency strategy with the backing DB (write-through vs write-around vs cache-aside, and TTL vs explicit invalidation)",
+      "Thundering-herd and hot-key mitigation"
+    ],
+    "referenceApproach": "Use consistent hashing (with virtual nodes for even load distribution) to map keys to cache nodes - this ensures that adding or removing a node only remaps a small fraction of keys (roughly 1/N), instead of a naive mod-N hash which would remap almost everything on any node-count change. The most common integration pattern is cache-aside: the application checks the cache first, on a miss reads the DB and populates the cache with a TTL, and on writes either invalidates the cached key or updates it directly - explicitly note that cache-aside gives eventual consistency with the DB, bounded by the TTL, which is usually an acceptable trade-off for the latency win. Thundering herd (many requests missing on the same expired popular key simultaneously and all hitting the DB) is mitigated with request coalescing (only the first miss triggers the DB read; concurrent requests for the same key wait on that in-flight fetch) and/or staggered TTLs (jitter) so popular keys don't all expire in the same instant. Hot keys that overload a single node despite even hashing are handled by replicating that specific key across multiple nodes (or a small local cache on each app server) rather than trying to fix the general hashing scheme for one outlier.",
+    "solutionNote": "Consistent hashing is table-stakes; what actually differentiates a strong answer is naming and solving thundering herd and hot-key skew explicitly, since those are the failure modes that take real caching layers down in production."
+  },
+  {
+    "id": "sysdes-009",
+    "title": "Design a Ride-Sharing Dispatch System",
+    "topic": "Distributed Systems",
+    "difficulty": "Advanced",
+    "prompt": "Design the core dispatch system for a ride-sharing app like Uber: riders request a ride, the system matches them with a nearby available driver in near real time, and both parties track the ride's live location.",
+    "functionalRequirements": [
+      "Riders request a ride with a pickup location; system finds and assigns a nearby available driver",
+      "Both rider and driver see each other's live location during matching and the trip",
+      "Handle driver availability state changes (available/en route/on trip) reliably"
+    ],
+    "nonFunctionalRequirements": [
+      "Matching must happen in a few seconds, not tens of seconds",
+      "Millions of drivers' locations update every few seconds - huge write volume of ephemeral data",
+      "Must work correctly under real-world density variance (dense city center vs sparse suburbs)"
+    ],
+    "clarifyingQuestions": [
+      "How often do driver locations update, and how stale can the data be for matching?",
+      "What's the matching criteria beyond proximity - driver rating, car type, surge pricing?",
+      "What happens if the nearest driver rejects or times out?"
+    ],
+    "evaluationFocus": [
+      "Geospatial indexing approach for 'find nearby available drivers' at scale (geohashing/quad-tree, not a naive distance scan)",
+      "Handling extremely high-churn location data without treating it like durable state",
+      "Matching as a stateful, retryable process (timeouts, rejection, reassignment)"
+    ],
+    "referenceApproach": "Driver locations are extremely high-write, ephemeral data - store current location in an in-memory geospatial index (e.g. geohashing, where nearby locations share a prefix, held in Redis with geo-commands, or a quad-tree/S2-cell based service) rather than a durable database row per update; durability isn't needed for a value that's stale within seconds anyway. A ride request queries that geo-index for available drivers within an expanding radius (start small, widen if too few candidates - this naturally adapts to dense vs sparse areas) and ranks candidates by distance plus other factors (rating, ETA). Matching is a stateful workflow, not a single call: the top candidate driver is offered the ride with a short timeout; if they reject or time out, the system offers the next candidate - this needs an explicit state machine per ride request (requested -> offered -> accepted/rejected/timed_out -> matched), not a fire-and-forget assignment. Once matched, live location updates for that specific trip flow through a lightweight pub/sub channel to both parties' apps, separate from the geo-index used for matching. The geo-index itself is sharded regionally (drivers in Tokyo don't need to be in the same index shard as drivers in NYC) to bound the size of any single index and keep query latency low.",
+    "solutionNote": "The two things a strong candidate names explicitly: a real geospatial index (not a distance scan over all drivers), and matching as a retryable stateful process rather than a single successful assignment call."
+  },
+  {
+    "id": "sysdes-010",
+    "title": "Design a Video Streaming Service",
+    "topic": "Distributed Systems",
+    "difficulty": "Expert",
+    "prompt": "Design a video streaming service like YouTube/Netflix: creators upload video, the system processes it for playback at multiple quality levels, and viewers stream it smoothly regardless of their device or network conditions.",
+    "functionalRequirements": [
+      "Accept uploaded video and process it into multiple resolutions/bitrates",
+      "Serve video to viewers with adaptive quality based on their network conditions",
+      "Support seeking within a video without re-downloading from the start"
+    ],
+    "nonFunctionalRequirements": [
+      "Playback start latency should be low, and playback should adapt smoothly to changing network conditions without stalling",
+      "Upload/transcoding is compute-heavy and can tolerate being asynchronous/eventually-ready",
+      "Global viewership - most bytes served should come from as close to the viewer as possible"
+    ],
+    "clarifyingQuestions": [
+      "Is live streaming in scope, or just video-on-demand?",
+      "Do we need DRM/content protection?",
+      "What's the acceptable delay between upload and a video being watchable?"
+    ],
+    "evaluationFocus": [
+      "Transcoding pipeline design (async, chunked, multiple output renditions) and why it's decoupled from upload",
+      "Adaptive bitrate streaming mechanics (chunked video + a manifest, client-side quality switching)",
+      "CDN/edge strategy for global delivery and cache-friendliness of the chunking scheme"
+    ],
+    "referenceApproach": "Upload is decoupled from processing: the raw upload lands in object storage and publishes an event that a transcoding pipeline consumes asynchronously, splitting the video into short chunks (e.g. a few seconds each) and encoding each chunk at multiple bitrates/resolutions (240p...4K) - this is what makes adaptive streaming possible, and it's fine for this to take minutes, since it's not on the viewer's critical path. The output is a set of chunk files per rendition plus a manifest file (e.g. HLS/DASH) listing available renditions and chunk URLs. Playback uses adaptive bitrate streaming: the client downloads the manifest, starts at a conservative quality, and continuously measures its own download throughput to switch up or down between renditions chunk-by-chunk - critically, the server does no per-viewer adaptation logic at all, the client decides, which is what lets this scale to huge audiences statelessly. Chunks are immutable and content-addressable, which makes them perfectly CDN-cacheable - nearly all viewer traffic should be served from edge CDN nodes, with origin storage only hit on a cache miss for a given chunk/region. Seeking works by jumping to the manifest entry for the target chunk rather than needing a byte-range request into one giant file. At true global scale, popular content is proactively pushed/pre-warmed into edge caches in regions where it's trending, rather than relying purely on reactive cache-miss-then-cache behavior.",
+    "solutionNote": "The signal that separates strong candidates: understanding that adaptive bitrate is a client-driven decision over pre-chunked renditions (not a server pushing quality changes), and that the whole design should be optimized around CDN cache-hit rate, since that's what actually bounds cost and latency at scale."
+  },
+  {
+    "id": "sysdes-011",
+    "title": "Design a Real-Time Feature Store for ML Serving",
+    "topic": "ML Infrastructure",
+    "difficulty": "Expert",
+    "prompt": "Design a feature store that serves pre-computed features to online ML models at inference time (e.g. for a fraud-detection or recommendation model), while also supporting offline training pipelines that need historically-consistent feature values - both reading from the same underlying feature definitions.",
+    "functionalRequirements": [
+      "Online serving: given an entity ID (user/transaction), return its current feature vector with single-digit-millisecond latency",
+      "Offline training: given a dataset of historical (entity, timestamp) pairs, return the feature values as they were AT that timestamp (point-in-time correctness), not the latest value",
+      "A single feature definition (the transformation logic) should back both paths, so online and offline features don't silently drift apart"
+    ],
+    "nonFunctionalRequirements": [
+      "Online path: very low latency, since it's on the critical path of a live prediction request",
+      "Offline path: must correctly avoid label/feature leakage - training data must never see a feature value that wasn't actually available yet at that historical timestamp",
+      "Feature computation pipelines (streaming and batch) must write consistently to both stores"
+    ],
+    "clarifyingQuestions": [
+      "Are features computed by streaming jobs (real-time), batch jobs (e.g. daily aggregates), or both?",
+      "What's an acceptable staleness bound for the online store - seconds, minutes?",
+      "Does point-in-time correctness need to account for late-arriving data (a feature that's backfilled after the fact)?"
+    ],
+    "evaluationFocus": [
+      "Correctly splitting online (low-latency key-value) and offline (large-scale, time-travel-capable) storage rather than trying to serve both from one system",
+      "Explicitly solving point-in-time correctness / training-serving skew, which is the signature failure mode of feature stores",
+      "A single shared feature definition/transformation layer feeding both stores, not two independently-maintained pipelines"
+    ],
+    "referenceApproach": "Use two physically different stores fed by the same feature computation logic: an online store (a low-latency key-value store like DynamoDB/Redis, keyed by entity ID, holding only the latest feature values) for serving, and an offline store (a columnar/time-partitioned store, e.g. on top of a data lake, that retains full history with timestamps) for training. The critical, most-often-missed requirement is point-in-time correctness: when building a training dataset from historical (entity, label_timestamp) pairs, the offline retrieval must join each row against the feature values that were actually valid as of that timestamp - not the current value - otherwise the model trains on information it wouldn't have had at prediction time in production (leakage), which silently inflates offline accuracy and then underperforms in production. This is implemented via time-travel joins against the timestamped offline store rather than a simple latest-value join. To keep online and offline features consistent with each other (avoiding training-serving skew), both stores are populated from the same feature transformation definitions - a streaming job (for real-time features) and/or a batch job (for aggregates) computes feature values once and writes to both the online store (upsert latest value) and the offline store (append timestamped record), rather than maintaining two separate implementations of 'how to compute this feature' that can drift apart. Late-arriving/backfilled data is handled by allowing the offline store to accept out-of-order writes for past timestamps while keeping the point-in-time join logic based on when the data was valid, not when it arrived.",
+    "solutionNote": "This problem is specifically testing whether the candidate knows about training-serving skew and point-in-time correctness by name - these are the real, non-obvious failure modes that separate someone who has actually built ML infrastructure from someone who's only trained models in a notebook."
+  }
+]

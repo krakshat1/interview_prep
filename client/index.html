@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interview Prep</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Practice a mock interview</h1>
+  <p class="subtitle">Pick a topic and difficulty. The AI will interview you out loud - answer by voice, just like the real thing.</p>
+
+  <div id="warning"></div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label for="category">Category</label>
+        <select id="category">
+          <option value="Mixed">Mixed (any category)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label for="difficulty">Starting difficulty</label>
+        <select id="difficulty">
+          <option value="Beginner">Beginner</option>
+          <option value="Intermediate" selected>Intermediate</option>
+          <option value="Advanced">Advanced</option>
+          <option value="Expert">Expert</option>
+        </select>
+      </div>
+    </div>
+    <p class="muted small">Difficulty adapts automatically as you go - it'll ramp up if you're doing well, and ease off if you're struggling.</p>
+    <div class="actions">
+      <button class="primary" id="startBtn">Start Interview</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>How it works</h3>
+    <ul class="clean muted">
+      <li>The interviewer asks one question at a time and speaks it aloud.</li>
+      <li>You answer by voice (or type, if your browser doesn't support speech recognition).</li>
+      <li>You get scored on technical accuracy, communication, and confidence - plus a filler-word count.</li>
+      <li>The correct answer is only shown <em>after</em> you respond.</li>
+      <li>Follow-up questions are asked when your answer leaves something to probe.</li>
+      <li>Works best in Chrome or Edge (Web Speech API support).</li>
+    </ul>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('index.html');
+
+(async function init() {
+  try {
+    const health = await api('/health');
+    if (!health.hasApiKey) {
+      document.getElementById('warning').innerHTML =
+        '<div class="error-banner">No AI API key configured on the server. Add AI_API_KEY to your .env file and restart the server before starting an interview.</div>';
+    }
+  } catch (e) {}
+
+  try {
+    const meta = await api('/questions/meta');
+    const sel = document.getElementById('category');
+    for (const c of meta.categories) {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    }
+    // Deep-link support, e.g. from the roadmap: index.html?category=Python&difficulty=Intermediate
+    const preCategory = qparam('category');
+    const preDifficulty = qparam('difficulty');
+    if (preCategory && meta.categories.includes(preCategory)) sel.value = preCategory;
+    if (preDifficulty) document.getElementById('difficulty').value = preDifficulty;
+  } catch (e) {
+    console.error(e);
+  }
+
+  try {
+    const profile = await api('/profile');
+    if (!profile) {
+      document.getElementById('warning').innerHTML += `
+        <div class="card" style="border-color: var(--accent);">
+          <h3 style="color: var(--text);">New here?</h3>
+          <p class="muted">Set up your career track, target date, and hours/day to get a personalized daily/weekly study plan instead of just ad-hoc practice.</p>
+          <a href="onboarding.html"><button class="primary">Set up my roadmap</button></a>
+        </div>`;
+    }
+  } catch (e) {}
+})();
+
+document.getElementById('startBtn').addEventListener('click', async () => {
+  const category = document.getElementById('category').value;
+  const difficulty = document.getElementById('difficulty').value;
+  const btn = document.getElementById('startBtn');
+  btn.disabled = true;
+  btn.textContent = 'Starting...';
+  try {
+    const result = await api('/interview/start', {
+      method: 'POST',
+      body: JSON.stringify({ category, difficulty }),
+    });
+    sessionStorage.setItem('activeSessionId', result.sessionId);
+    sessionStorage.setItem('firstQuestion', JSON.stringify(result.question));
+    window.location.href = 'interview.html';
+  } catch (e) {
+    alert('Could not start interview: ' + e.message);
+    btn.disabled = false;
+    btn.textContent = 'Start Interview';
+  }
+});
+</script>
+</body>
+</html>

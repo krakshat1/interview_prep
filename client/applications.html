@@ -1,0 +1,162 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Applications</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="row" style="align-items:center;">
+    <h1 style="margin-bottom:0;">Job Applications</h1>
+    <div style="flex:0 0 auto;"><button class="primary" id="addBtn">+ Add Application</button></div>
+  </div>
+  <p class="subtitle">Track target companies, stages, feedback, and rejection reasons so you can spot recurring weaknesses across real interviews.</p>
+
+  <div id="listArea"><span class="spinner"></span> Loading...</div>
+</div>
+<div id="modalRoot"></div>
+<script src="shared.js"></script>
+<script>
+renderNav('applications.html');
+
+const STATUSES = ['Applied', 'Phone Screen', 'Technical', 'Onsite', 'Offer', 'Rejected'];
+
+function statusBadge(status) {
+  const cls = status === 'Offer' ? 'good' : status === 'Rejected' ? 'bad' : 'warn';
+  return `<span class="badge ${cls}">${escapeHtml(status)}</span>`;
+}
+
+async function loadApps() {
+  const apps = await api('/applications');
+  const listArea = document.getElementById('listArea');
+  if (!apps.length) {
+    listArea.innerHTML = '<div class="card empty-state">No applications tracked yet.</div>';
+    return;
+  }
+  listArea.innerHTML = apps.map((a) => `
+    <div class="card">
+      <div class="row" style="align-items:center;">
+        <div>
+          <h2 style="margin-bottom:2px;">${escapeHtml(a.role)} @ ${escapeHtml(a.company)}</h2>
+          <p class="muted small" style="margin:0;">Applied ${a.appliedDate}</p>
+        </div>
+        <div style="flex:0 0 auto; text-align:right;">
+          ${statusBadge(a.status)}
+          <select class="statusSelect small" data-id="${a.id}" style="width:auto; display:inline-block; margin-left:8px;">
+            ${STATUSES.map(s => `<option ${s === a.status ? 'selected' : ''}>${s}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      ${a.notes ? `<p class="small">${escapeHtml(a.notes)}</p>` : ''}
+      <h3>Interview stages</h3>
+      ${a.interviewStages.length ? `
+        <ul class="clean small">
+          ${a.interviewStages.map(s => `<li>${escapeHtml(s.stage)} (${s.date}) - ${s.outcome}${s.feedback ? ': ' + escapeHtml(s.feedback) : ''}</li>`).join('')}
+        </ul>
+      ` : '<p class="muted small">No stages logged yet.</p>'}
+      <div class="actions">
+        <button class="ghost small addStageBtn" data-id="${a.id}">+ Log interview stage</button>
+        <button class="danger small delBtn" data-id="${a.id}">Delete</button>
+      </div>
+    </div>
+  `).join('');
+
+  listArea.querySelectorAll('.statusSelect').forEach((sel) => {
+    sel.addEventListener('change', async () => {
+      await api(`/applications/${sel.dataset.id}`, { method: 'PUT', body: JSON.stringify({ status: sel.value }) });
+      loadApps();
+    });
+  });
+  listArea.querySelectorAll('.delBtn').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      if (!confirm('Delete this application?')) return;
+      await api(`/applications/${btn.dataset.id}`, { method: 'DELETE' });
+      loadApps();
+    });
+  });
+  listArea.querySelectorAll('.addStageBtn').forEach((btn) => {
+    btn.addEventListener('click', () => openStageModal(btn.dataset.id));
+  });
+}
+
+function openStageModal(appId) {
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal">
+        <h2>Log interview stage</h2>
+        <div class="field"><label>Stage name</label><input type="text" id="f_stage" placeholder="e.g. Phone Screen, Onsite Round 2" /></div>
+        <div class="field"><label>Date</label><input type="text" id="f_date" value="${new Date().toISOString().slice(0,10)}" /></div>
+        <div class="field"><label>Outcome</label>
+          <select id="f_outcome"><option>Pending</option><option>Passed</option><option>Failed</option></select>
+        </div>
+        <div class="field"><label>Feedback / notes</label><textarea id="f_feedback" rows="3"></textarea></div>
+        <div class="actions">
+          <button class="primary" id="saveStageBtn">Save</button>
+          <button class="ghost" id="cancelStageBtn">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('cancelStageBtn').addEventListener('click', () => root.innerHTML = '');
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') root.innerHTML = ''; });
+  document.getElementById('saveStageBtn').addEventListener('click', async () => {
+    await api(`/applications/${appId}/stage`, {
+      method: 'POST',
+      body: JSON.stringify({
+        stage: document.getElementById('f_stage').value,
+        date: document.getElementById('f_date').value,
+        outcome: document.getElementById('f_outcome').value,
+        feedback: document.getElementById('f_feedback').value,
+      }),
+    });
+    root.innerHTML = '';
+    loadApps();
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click', () => {
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal">
+        <h2>Add Application</h2>
+        <div class="row">
+          <div class="field"><label>Company</label><input type="text" id="f_company" /></div>
+          <div class="field"><label>Role</label><input type="text" id="f_role" /></div>
+        </div>
+        <div class="field"><label>Applied date</label><input type="text" id="f_appliedDate" value="${new Date().toISOString().slice(0,10)}" /></div>
+        <div class="field"><label>Job description (optional, paste to use in Job Match later)</label><textarea id="f_jd" rows="4"></textarea></div>
+        <div class="field"><label>Notes</label><textarea id="f_notes" rows="2"></textarea></div>
+        <div class="actions">
+          <button class="primary" id="saveAppBtn">Add</button>
+          <button class="ghost" id="cancelAppBtn">Cancel</button>
+        </div>
+      </div>
+    </div>`;
+  document.getElementById('cancelAppBtn').addEventListener('click', () => root.innerHTML = '');
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') root.innerHTML = ''; });
+  document.getElementById('saveAppBtn').addEventListener('click', async () => {
+    await api('/applications', {
+      method: 'POST',
+      body: JSON.stringify({
+        company: document.getElementById('f_company').value,
+        role: document.getElementById('f_role').value,
+        appliedDate: document.getElementById('f_appliedDate').value,
+        jobDescription: document.getElementById('f_jd').value,
+        notes: document.getElementById('f_notes').value,
+      }),
+    });
+    root.innerHTML = '';
+    loadApps();
+  });
+});
+
+loadApps();
+</script>
+</body>
+</html>

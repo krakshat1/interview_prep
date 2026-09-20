@@ -1,0 +1,149 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Roadmap</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  details.week { border: 1px solid var(--border); border-radius: 8px; margin-bottom: 10px; background: var(--bg-elev); }
+  details.week[open] { border-color: var(--accent-dim); }
+  details.week summary { cursor: pointer; padding: 12px 16px; font-weight: 600; list-style: none; display: flex; justify-content: space-between; align-items: center; }
+  details.week summary::-webkit-details-marker { display: none; }
+  .week-body { padding: 0 16px 14px; }
+  .day-card { border-top: 1px solid var(--border); padding: 12px 0; }
+  .day-card:first-child { border-top: none; }
+  .day-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .task-row { display: flex; gap: 8px; align-items: flex-start; font-size: 13.5px; padding: 3px 0; }
+  .task-type { flex: 0 0 90px; text-transform: uppercase; font-size: 10.5px; letter-spacing: .04em; color: var(--text-dim); padding-top: 2px; }
+  .today-card { border: 1px solid var(--accent); }
+  .day-complete { opacity: .55; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="row" style="align-items:center;">
+    <div>
+      <h1 style="margin-bottom:2px;">Your Roadmap</h1>
+      <p class="subtitle" style="margin-bottom:0;" id="subtitle">Loading...</p>
+    </div>
+    <div style="text-align:right; flex:0 0 auto;">
+      <a href="onboarding.html"><button class="ghost small">Edit profile</button></a>
+      <button class="ghost small" id="regenBtn">Regenerate</button>
+    </div>
+  </div>
+
+  <div id="todaySection"></div>
+  <div id="weeksSection"></div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('roadmap.html');
+
+function taskRow(t) {
+  const link = t.link ? `<a href="${t.link}" class="small">Go &rarr;</a>` : '';
+  return `<div class="task-row">
+    <span class="task-type">${t.type}</span>
+    <span>${t.topic ? `<strong>${escapeHtml(t.topic)}</strong> - ` : ''}${escapeHtml(t.description)} ${link}</span>
+  </div>`;
+}
+
+function dayCard(day, isToday) {
+  return `
+    <div class="day-card ${day.completed ? 'day-complete' : ''}">
+      <div class="day-head">
+        <div><strong>${day.dayOfWeek}</strong> <span class="muted small">${day.date}${isToday ? ' (today)' : ''} - ${escapeHtml(day.role)}</span></div>
+        <label class="small" style="display:flex; align-items:center; gap:6px; cursor:pointer;">
+          <input type="checkbox" data-date="${day.date}" class="dayCompleteBox" ${day.completed ? 'checked' : ''} /> done
+        </label>
+      </div>
+      ${day.tasks.map(taskRow).join('')}
+    </div>
+  `;
+}
+
+async function loadToday() {
+  try {
+    const today = await api('/roadmap/today');
+    const section = document.getElementById('todaySection');
+    if (!today.day) {
+      section.innerHTML = `<div class="card muted">${escapeHtml(today.note || 'No plan data for today.')}</div>`;
+      return;
+    }
+    section.innerHTML = `
+      <div class="card today-card">
+        <h3>Today</h3>
+        ${dayCard(today.day, true)}
+      </div>
+    `;
+    wireCheckboxes(section);
+  } catch (e) {}
+}
+
+function wireCheckboxes(root) {
+  root.querySelectorAll('.dayCompleteBox').forEach((box) => {
+    box.addEventListener('change', async () => {
+      await api(`/roadmap/day/${box.dataset.date}/complete`, {
+        method: 'POST',
+        body: JSON.stringify({ completed: box.checked }),
+      });
+      box.closest('.day-card').classList.toggle('day-complete', box.checked);
+    });
+  });
+}
+
+async function loadWeeks() {
+  const section = document.getElementById('weeksSection');
+  try {
+    const roadmap = await api('/roadmap');
+    document.getElementById('subtitle').textContent =
+      `${roadmap.track} - ${roadmap.planLength} plan - started ${roadmap.startDate} - ${roadmap.hoursPerDay}h/day`;
+
+    const todayStr = new Date().toISOString().slice(0, 10);
+    const currentWeekNum = roadmap.weeks.find((w) => w.days.some((d) => d.date === todayStr))?.weekNumber;
+
+    section.innerHTML = roadmap.weeks.map((week) => `
+      <details class="week" ${week.weekNumber === currentWeekNum ? 'open' : ''}>
+        <summary>
+          <span>Week ${week.weekNumber} - ${escapeHtml(week.theme)}</span>
+          <span class="badge small">${week.days.filter(d => d.completed).length}/7 done</span>
+        </summary>
+        <div class="week-body">
+          ${week.days.map((d) => dayCard(d, d.date === todayStr)).join('')}
+        </div>
+      </details>
+    `).join('');
+    wireCheckboxes(section);
+  } catch (e) {
+    section.innerHTML = `
+      <div class="card empty-state">
+        <p>No roadmap yet.</p>
+        <a href="onboarding.html"><button class="primary">Set up my roadmap</button></a>
+      </div>`;
+    document.getElementById('subtitle').textContent = 'No roadmap generated yet.';
+  }
+}
+
+document.getElementById('regenBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('regenBtn');
+  btn.disabled = true;
+  btn.textContent = 'Regenerating...';
+  try {
+    await api('/roadmap/regenerate', { method: 'POST' });
+    await loadWeeks();
+    await loadToday();
+  } catch (e) {
+    alert('Could not regenerate: ' + e.message);
+  }
+  btn.disabled = false;
+  btn.textContent = 'Regenerate';
+});
+
+loadToday();
+loadWeeks();
+</script>
+</body>
+</html>

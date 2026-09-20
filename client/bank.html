@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Question Bank</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="row" style="align-items:center;">
+    <div>
+      <h1 style="margin-bottom:2px;">Question Bank</h1>
+      <p class="subtitle" style="margin-bottom:0;">Add, edit, or remove interview questions.</p>
+    </div>
+    <div style="text-align:right; flex:0 0 auto;">
+      <button class="primary" id="addBtn">+ Add Question</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="row">
+      <div class="field">
+        <label>Filter by category</label>
+        <select id="filterCategory"><option value="">All categories</option></select>
+      </div>
+      <div class="field">
+        <label>Filter by difficulty</label>
+        <select id="filterDifficulty">
+          <option value="">All difficulties</option>
+          <option>Beginner</option><option>Intermediate</option><option>Advanced</option><option>Expert</option>
+        </select>
+      </div>
+    </div>
+  </div>
+
+  <div class="card" id="listCard">
+    <table>
+      <thead><tr><th>Question</th><th>Category</th><th>Difficulty</th><th></th></tr></thead>
+      <tbody id="tbody"></tbody>
+    </table>
+    <div class="empty-state" id="emptyState" style="display:none;">No questions match these filters.</div>
+  </div>
+</div>
+
+<div id="modalRoot"></div>
+
+<script src="shared.js"></script>
+<script>
+renderNav('bank.html');
+
+let allQuestions = [];
+
+async function loadMeta() {
+  const meta = await api('/questions/meta');
+  const sel = document.getElementById('filterCategory');
+  sel.innerHTML = '<option value="">All categories</option>' +
+    meta.categories.map(c => `<option value="${escapeHtml(c)}">${escapeHtml(c)}</option>`).join('');
+}
+
+async function loadQuestions() {
+  const category = document.getElementById('filterCategory').value;
+  const difficulty = document.getElementById('filterDifficulty').value;
+  const params = new URLSearchParams();
+  if (category) params.set('category', category);
+  if (difficulty) params.set('difficulty', difficulty);
+  allQuestions = await api('/questions?' + params.toString());
+  renderTable();
+}
+
+function renderTable() {
+  const tbody = document.getElementById('tbody');
+  const empty = document.getElementById('emptyState');
+  if (!allQuestions.length) {
+    tbody.innerHTML = '';
+    empty.style.display = 'block';
+    return;
+  }
+  empty.style.display = 'none';
+  tbody.innerHTML = allQuestions.map(q => `
+    <tr>
+      <td style="max-width:420px;">${escapeHtml(q.question)}</td>
+      <td><span class="badge">${escapeHtml(q.category)}</span></td>
+      <td><span class="badge">${escapeHtml(q.difficulty)}</span></td>
+      <td style="white-space:nowrap;">
+        <button class="ghost small" data-edit="${q.id}">Edit</button>
+        <button class="danger small" data-del="${q.id}">Delete</button>
+      </td>
+    </tr>
+  `).join('');
+
+  tbody.querySelectorAll('[data-edit]').forEach(btn =>
+    btn.addEventListener('click', () => openModal(allQuestions.find(q => q.id === btn.dataset.edit))));
+  tbody.querySelectorAll('[data-del]').forEach(btn =>
+    btn.addEventListener('click', () => deleteQuestion(btn.dataset.del)));
+}
+
+async function deleteQuestion(id) {
+  const q = allQuestions.find(x => x.id === id);
+  if (!confirm(`Delete this question?\n\n"${q?.question}"`)) return;
+  await api(`/questions/${id}`, { method: 'DELETE' });
+  await loadQuestions();
+}
+
+function openModal(existing) {
+  const isEdit = !!existing;
+  const root = document.getElementById('modalRoot');
+  root.innerHTML = `
+    <div class="modal-overlay" id="overlay">
+      <div class="modal">
+        <h2>${isEdit ? 'Edit' : 'Add'} Question</h2>
+        <div class="field"><label>Question</label><textarea id="f_question" rows="2">${escapeHtml(existing?.question || '')}</textarea></div>
+        <div class="row">
+          <div class="field">
+            <label>Category</label>
+            <input type="text" id="f_category" list="catList" value="${escapeHtml(existing?.category || '')}" placeholder="e.g. Python, System Design, Behavioral/HR" />
+            <datalist id="catList"></datalist>
+          </div>
+          <div class="field">
+            <label>Difficulty</label>
+            <select id="f_difficulty">
+              ${['Beginner','Intermediate','Advanced','Expert'].map(d => `<option ${existing?.difficulty === d ? 'selected' : ''}>${d}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="field"><label>Expected / professional answer</label><textarea id="f_expectedAnswer" rows="4">${escapeHtml(existing?.expectedAnswer || '')}</textarea></div>
+        <div class="field"><label>Key concepts (comma-separated)</label><input type="text" id="f_keyConcepts" value="${escapeHtml((existing?.keyConcepts || []).join(', '))}" /></div>
+        <div class="field"><label>Follow-up questions (comma-separated)</label><input type="text" id="f_followUps" value="${escapeHtml((existing?.followUpQuestions || []).join(', '))}" /></div>
+        <div class="field"><label>Common mistakes (comma-separated)</label><input type="text" id="f_mistakes" value="${escapeHtml((existing?.commonMistakes || []).join(', '))}" /></div>
+        <div id="modalError"></div>
+        <div class="actions">
+          <button class="primary" id="saveBtn">${isEdit ? 'Save changes' : 'Add question'}</button>
+          <button class="ghost" id="cancelBtn">Cancel</button>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('catList').innerHTML =
+    [...new Set(allQuestions.map(q => q.category))].map(c => `<option value="${escapeHtml(c)}">`).join('');
+
+  document.getElementById('cancelBtn').addEventListener('click', () => root.innerHTML = '');
+  document.getElementById('overlay').addEventListener('click', (e) => { if (e.target.id === 'overlay') root.innerHTML = ''; });
+
+  document.getElementById('saveBtn').addEventListener('click', async () => {
+    const splitList = (v) => v.split(',').map(s => s.trim()).filter(Boolean);
+    const payload = {
+      question: document.getElementById('f_question').value.trim(),
+      category: document.getElementById('f_category').value.trim(),
+      difficulty: document.getElementById('f_difficulty').value,
+      expectedAnswer: document.getElementById('f_expectedAnswer').value.trim(),
+      keyConcepts: splitList(document.getElementById('f_keyConcepts').value),
+      followUpQuestions: splitList(document.getElementById('f_followUps').value),
+      commonMistakes: splitList(document.getElementById('f_mistakes').value),
+    };
+    try {
+      if (isEdit) {
+        await api(`/questions/${existing.id}`, { method: 'PUT', body: JSON.stringify(payload) });
+      } else {
+        await api('/questions', { method: 'POST', body: JSON.stringify(payload) });
+      }
+      root.innerHTML = '';
+      await loadMeta();
+      await loadQuestions();
+    } catch (e) {
+      document.getElementById('modalError').innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+    }
+  });
+}
+
+document.getElementById('addBtn').addEventListener('click', () => openModal(null));
+document.getElementById('filterCategory').addEventListener('change', loadQuestions);
+document.getElementById('filterDifficulty').addEventListener('change', loadQuestions);
+
+(async function init() {
+  const me = await api('/auth/me').catch(() => null);
+  if (!me || me.role !== 'admin') {
+    document.querySelector('.app-shell').innerHTML = `
+      <nav class="topnav" id="topnav"></nav>
+      <div class="empty-state">This page is for admins only.</div>
+    `;
+    renderNav('bank.html');
+    return;
+  }
+  await loadMeta();
+  await loadQuestions();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Set Up Your Roadmap</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Set up your roadmap</h1>
+  <p class="subtitle">Tell me where you're starting from and what you're aiming for - I'll generate a personalized daily/weekly study plan from it. You can re-run this any time to regenerate the plan.</p>
+
+  <div id="warning"></div>
+
+  <div class="card">
+    <div class="field">
+      <label>Career track</label>
+      <select id="track">
+        <option value="Data Scientist">Data Scientist</option>
+        <option value="ML Engineer">ML Engineer</option>
+        <option value="AI Engineer">AI Engineer</option>
+      </select>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Plan length</label>
+        <select id="planLength">
+          <option value="3-month">3-month intensive (job-ready fast)</option>
+          <option value="6-month">6-month deep (strong fundamentals)</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Hours available per day</label>
+        <input type="text" id="hoursPerDay" value="2" />
+      </div>
+    </div>
+
+    <div class="row">
+      <div class="field">
+        <label>Start date</label>
+        <input type="text" id="startDate" placeholder="YYYY-MM-DD" />
+      </div>
+      <div class="field">
+        <label>Current self-assessed level</label>
+        <select id="currentLevel">
+          <option>Beginner</option>
+          <option selected>Intermediate</option>
+          <option>Advanced</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Known weak areas (comma-separated - these get scheduled earlier and more often)</label>
+      <input type="text" id="weaknesses" placeholder="e.g. SQL, System Design, Statistics" />
+    </div>
+
+    <div class="field">
+      <label>Target companies (comma-separated, optional)</label>
+      <input type="text" id="targetCompanies" placeholder="e.g. Google, Amazon, a specific startup" />
+    </div>
+
+    <div class="field">
+      <label>Paste your resume (optional - used later for resume-defense questions on the Resume page too)</label>
+      <textarea id="resumeText" rows="6" placeholder="Paste your resume text here..."></textarea>
+    </div>
+
+    <div class="actions">
+      <button class="primary" id="submitBtn">Generate my roadmap</button>
+    </div>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('onboarding.html');
+
+(async function init() {
+  document.getElementById('startDate').value = new Date().toISOString().slice(0, 10);
+  try {
+    const profile = await api('/profile');
+    if (profile) {
+      document.getElementById('track').value = profile.track;
+      document.getElementById('planLength').value = profile.planLength;
+      document.getElementById('hoursPerDay').value = profile.hoursPerDay;
+      document.getElementById('startDate').value = profile.startDate;
+      document.getElementById('currentLevel').value = profile.currentLevel;
+      document.getElementById('weaknesses').value = (profile.weaknesses || []).join(', ');
+      document.getElementById('targetCompanies').value = (profile.targetCompanies || []).join(', ');
+      document.getElementById('resumeText').value = profile.resumeText || '';
+      document.getElementById('submitBtn').textContent = 'Regenerate my roadmap';
+    }
+  } catch (e) {}
+})();
+
+document.getElementById('submitBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  btn.textContent = 'Generating...';
+  try {
+    await api('/profile', {
+      method: 'POST',
+      body: JSON.stringify({
+        track: document.getElementById('track').value,
+        planLength: document.getElementById('planLength').value,
+        hoursPerDay: document.getElementById('hoursPerDay').value,
+        startDate: document.getElementById('startDate').value,
+        currentLevel: document.getElementById('currentLevel').value,
+        weaknesses: document.getElementById('weaknesses').value,
+        targetCompanies: document.getElementById('targetCompanies').value,
+        resumeText: document.getElementById('resumeText').value,
+      }),
+    });
+    window.location.href = 'roadmap.html';
+  } catch (e) {
+    document.getElementById('warning').innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+    btn.disabled = false;
+    btn.textContent = 'Generate my roadmap';
+  }
+});
+</script>
+</body>
+</html>

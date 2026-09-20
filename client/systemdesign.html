@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>System Design Practice</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  .problem-pill { display: block; width: 100%; text-align: left; margin-bottom: 6px; }
+  .problem-pill.active { border-color: var(--accent); background: var(--bg-elev-2); }
+  #answerText { min-height: 260px; font-family: "Cascadia Code", Consolas, "Courier New", monospace; font-size: 13.5px; }
+  ul.reqlist { margin: 6px 0 0; padding-left: 18px; }
+  ul.reqlist li { margin-bottom: 3px; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1 style="margin-bottom:0;">System Design Practice</h1>
+  <p class="subtitle">Free-form design write-ups, graded like a real bar-raiser interview - not a code executor, so be as thorough as you would out loud in a real onsite.</p>
+
+  <div class="row">
+    <div style="flex: 0 0 260px;">
+      <div class="card" id="problemList"><span class="spinner"></span> Loading...</div>
+    </div>
+    <div style="flex: 1; min-width: 320px;">
+      <div class="card" id="detailPanel">
+        <p class="muted">Pick a problem from the list.</p>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('systemdesign.html');
+
+let problems = [];
+let currentProblem = null;
+
+async function loadProblems() {
+  const listEl = document.getElementById('problemList');
+  listEl.innerHTML = '<span class="spinner"></span> Loading...';
+  problems = await api('/systemdesign');
+  listEl.innerHTML = problems.map((p) => `
+    <button class="ghost problem-pill" data-id="${p.id}">
+      <div>${escapeHtml(p.title)}</div>
+      <div class="muted small">${escapeHtml(p.topic)} &middot; ${p.difficulty}</div>
+    </button>
+  `).join('') || '<p class="muted small">No problems.</p>';
+
+  listEl.querySelectorAll('.problem-pill').forEach((btn) => {
+    btn.addEventListener('click', () => selectProblem(btn.dataset.id));
+  });
+}
+
+function selectProblem(id) {
+  currentProblem = problems.find((p) => p.id === id);
+  document.querySelectorAll('.problem-pill').forEach((b) => b.classList.toggle('active', b.dataset.id === id));
+  renderDetail();
+}
+
+function renderDetail() {
+  const p = currentProblem;
+  const panel = document.getElementById('detailPanel');
+  panel.innerHTML = `
+    <h2 style="margin-bottom:4px;">${escapeHtml(p.title)}</h2>
+    <p class="muted small">${escapeHtml(p.topic)} &middot; ${p.difficulty}</p>
+    <p>${escapeHtml(p.prompt)}</p>
+
+    <div class="row">
+      <div class="field">
+        <label>Functional requirements</label>
+        <ul class="reqlist muted small">${(p.functionalRequirements || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+      </div>
+      <div class="field">
+        <label>Non-functional requirements</label>
+        <ul class="reqlist muted small">${(p.nonFunctionalRequirements || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Questions a strong candidate would ask first (optional reading)</label>
+      <ul class="reqlist muted small">${(p.clarifyingQuestions || []).map(r => `<li>${escapeHtml(r)}</li>`).join('')}</ul>
+    </div>
+
+    <div class="field">
+      <label>Your design write-up</label>
+      <textarea id="answerText" placeholder="Walk through it like a real interview: clarify requirements &amp; scale, propose a high-level architecture, go deep on the hardest part, and call out trade-offs..."></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="submitBtn">Submit for review</button>
+    </div>
+    <div id="resultArea"></div>
+  `;
+  document.getElementById('submitBtn').addEventListener('click', submitDesign);
+}
+
+function scoreBox(label, val) {
+  return `<div class="score-box"><div class="num badge ${scoreClass(val)}" style="font-size:20px;border:none;background:none;padding:0;">${val}/10</div><div class="label">${label}</div></div>`;
+}
+
+async function submitDesign() {
+  const answerText = document.getElementById('answerText').value;
+  const resultArea = document.getElementById('resultArea');
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true; btn.textContent = 'Running...';
+  resultArea.innerHTML = '<div class="row" style="align-items:center; gap:8px;"><span class="spinner"></span> Getting feedback from a bar-raiser-style review - this can take 10-20 seconds...</div>';
+  try {
+    const result = await api(`/systemdesign/${currentProblem.id}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ answerText }),
+    });
+    const r = result.review;
+    resultArea.innerHTML = `
+      <h3>Overall: ${result.overallScore}/10</h3>
+      <div class="score-grid">
+        ${scoreBox('Requirements', r.requirementsScore)}
+        ${scoreBox('Architecture', r.architectureScore)}
+        ${scoreBox('Scalability', r.scalabilityScore)}
+        ${scoreBox('Trade-offs', r.tradeoffsScore)}
+      </div>
+      <p style="font-style:italic;">"${escapeHtml(r.interviewerRemark)}"</p>
+      <h3>Strengths</h3><ul class="clean">${r.strengths.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+      <h3>Gaps</h3><ul class="clean">${r.gaps.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">None noted.</li>'}</ul>
+      <h3>Suggestions</h3><ul class="clean">${r.suggestions.map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+      <h3>Reference approach</h3>
+      <div class="card" style="background:var(--bg-elev-2); margin-bottom:0;">${escapeHtml(result.referenceApproach)}</div>
+    `;
+  } catch (e) {
+    resultArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+  btn.disabled = false; btn.textContent = 'Submit for review';
+}
+
+loadProblems();
+</script>
+</body>
+</html>

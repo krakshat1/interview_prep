@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Secrets
+.env
+
+# Personal / runtime data (keep the shared seed files tracked)
+data/accounts.json
+data/authSessions.json
+data/sessions.json
+data/sessions/
+data/practiceSubmissions/
+data/users/
+data/profile.json
+data/roadmap.json
+data/mastery.json
+data/applications.json
+
+# Logs and editor/tool state
+logs/
+.claude/
+.kilo/
+*.log
+.DS_Store
+
+# Study material (large PDFs / spreadsheets)
+resources/

@@ -1,0 +1,145 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Dashboard</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  .meter-row { display: grid; grid-template-columns: 170px 1fr 42px; align-items: center; gap: 10px; margin-bottom: 10px; }
+  .meter-track { background: var(--bg-elev-2); border-radius: 999px; height: 10px; overflow: hidden; }
+  .meter-fill { height: 100%; border-radius: 999px; }
+  .meter-fill.good { background: var(--good); }
+  .meter-fill.warn { background: var(--warn); }
+  .meter-fill.bad { background: var(--bad); }
+  .hero-score { font-size: 48px; font-weight: 800; line-height: 1; }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Dashboard</h1>
+  <p class="subtitle">Your actual measured readiness, computed from real practice data - not a self-report.</p>
+
+  <div id="content"><span class="spinner"></span> Loading...</div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('dashboard.html');
+
+function pctClass(v) {
+  if (v >= 70) return 'good';
+  if (v >= 40) return 'warn';
+  return 'bad';
+}
+
+function meterRow(label, pct) {
+  return `
+    <div class="meter-row">
+      <span class="small">${escapeHtml(label)}</span>
+      <div class="meter-track"><div class="meter-fill ${pctClass(pct)}" style="width:${pct}%;"></div></div>
+      <span class="small" style="text-align:right;">${pct}%</span>
+    </div>
+  `;
+}
+
+async function load() {
+  const content = document.getElementById('content');
+  try {
+    const [dash, weekly] = await Promise.all([
+      api('/dashboard'),
+      api('/dashboard/weekly-report'),
+    ]);
+
+    const breakdownRows = Object.entries(dash.readiness.breakdown)
+      .sort((a, b) => a[1] - b[1])
+      .map(([area, pct]) => meterRow(area, pct))
+      .join('');
+
+    content.innerHTML = `
+      <div class="row">
+        <div class="card" style="flex:0 0 220px; text-align:center;">
+          <div class="hero-score" style="color: var(--${pctClass(dash.readiness.overall)});">${dash.readiness.overall}%</div>
+          <div class="muted small">Overall readiness</div>
+          <p class="muted small" style="margin-top:10px;">${dash.totalSessions} session${dash.totalSessions === 1 ? '' : 's'} completed</p>
+        </div>
+        <div class="card" style="flex:1; min-width:320px;">
+          <h3>Readiness by area</h3>
+          ${breakdownRows || '<p class="muted small">No practice data yet.</p>'}
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Due for review</h2>
+        ${dash.dueForReview.length ? `
+          <table>
+            <thead><tr><th>Area</th><th>Status</th><th>Last score</th><th>Attempts</th><th></th></tr></thead>
+            <tbody>
+              ${dash.dueForReview.map(e => `
+                <tr>
+                  <td>${escapeHtml(e.category)}</td>
+                  <td><span class="badge ${e.status === 'weak' ? 'bad' : 'warn'}">${e.status}</span></td>
+                  <td>${e.lastScore ?? '-'}/10</td>
+                  <td>${e.attempts}</td>
+                  <td><a href="index.html?category=${encodeURIComponent(e.category)}">Practice now &rarr;</a></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : '<p class="muted small">Nothing due - keep practicing to build up mastery data.</p>'}
+      </div>
+
+      <div class="card">
+        <h2>This week (${weekly.periodStart} to ${weekly.periodEnd})</h2>
+        <div class="score-grid">
+          <div class="score-box"><div class="num">${weekly.sessionsCompleted}</div><div class="label">Sessions</div></div>
+          <div class="score-box"><div class="num">${weekly.questionsAnswered}</div><div class="label">Questions</div></div>
+          <div class="score-box"><div class="num">${weekly.overallScore}</div><div class="label">Overall /10</div></div>
+          <div class="score-box"><div class="num">${weekly.communicationScore}</div><div class="label">Comm /10</div></div>
+        </div>
+        <div class="row">
+          <div>
+            <h3>Strongest areas</h3>
+            <ul class="clean">${weekly.strongestAreas.map(a => `<li>${escapeHtml(a.category)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+          </div>
+          <div>
+            <h3>Weakest areas</h3>
+            <ul class="clean">${weekly.weakestAreas.map(a => `<li>${escapeHtml(a.category)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+          </div>
+        </div>
+        <h3>Repeated mistakes</h3>
+        <ul class="clean">${weekly.repeatedMistakes.map(m => `<li>${escapeHtml(m.issue)} <span class="muted small">(${m.count}&times;)</span></li>`).join('') || '<li class="muted small">None repeated this week.</li>'}</ul>
+        <h3>Topics to revise</h3>
+        <div class="chip-list">${weekly.topicsToRevise.map(t => `<span class="chip">${escapeHtml(t.concept)}</span>`).join('') || '<span class="muted small">None flagged.</span>'}</div>
+      </div>
+
+      <div class="card">
+        <h2>Recent sessions</h2>
+        ${dash.recentSessions.length ? `
+          <table>
+            <thead><tr><th>Date</th><th>Category</th><th>Overall</th><th></th></tr></thead>
+            <tbody>
+              ${dash.recentSessions.map(s => `
+                <tr>
+                  <td>${fmtDate(s.startedAt)}</td>
+                  <td>${escapeHtml(s.category)}</td>
+                  <td><span class="badge ${scoreClass(s.overallScore)}">${s.overallScore}</span></td>
+                  <td><a href="reports.html?session=${s.id}">View</a></td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        ` : '<p class="muted small">No sessions yet.</p>'}
+      </div>
+    `;
+  } catch (e) {
+    content.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+}
+
+load();
+</script>
+</body>
+</html>

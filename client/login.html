@@ -1,0 +1,59 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Log In</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell" style="max-width:400px; padding-top:60px;">
+  <h1 style="text-align:center;">🎙️ Interview Prep</h1>
+  <p class="subtitle" style="text-align:center;">Log in to your dashboard</p>
+  <div class="card">
+    <div id="errorArea"></div>
+    <div class="field">
+      <label for="email">Email</label>
+      <input type="text" id="email" autocomplete="username" />
+    </div>
+    <div class="field">
+      <label for="password">Password</label>
+      <input type="password" id="password" autocomplete="current-password" />
+    </div>
+    <div class="actions">
+      <button class="primary" id="loginBtn" style="flex:1;">Log In</button>
+    </div>
+  </div>
+  <p class="muted small" style="text-align:center;">No account yet? <a href="signup.html">Sign up</a></p>
+</div>
+<script src="shared.js"></script>
+<script>
+document.getElementById('loginBtn').addEventListener('click', submit);
+document.getElementById('password').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+document.getElementById('email').addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); });
+
+async function submit() {
+  const email = document.getElementById('email').value.trim();
+  const password = document.getElementById('password').value;
+  const errorArea = document.getElementById('errorArea');
+  const btn = document.getElementById('loginBtn');
+  errorArea.innerHTML = '';
+  btn.disabled = true; btn.textContent = 'Logging in...';
+  try {
+    const res = await fetch('/api/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    });
+    const body = await res.json();
+    if (!res.ok) throw new Error(body.error || 'Login failed');
+    window.location.href = 'index.html';
+  } catch (e) {
+    errorArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+    btn.disabled = false; btn.textContent = 'Log In';
+  }
+}
+</script>
+</body>
+</html>

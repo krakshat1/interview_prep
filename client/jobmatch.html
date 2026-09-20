@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Job Match</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Job Description Gap Analysis</h1>
+  <p class="subtitle">Paste a job description. The AI compares it against your <em>measured</em> skill levels (from your actual practice data on the Dashboard, not a guess) and produces a gap table.</p>
+
+  <div class="card">
+    <div class="field">
+      <label>Job description text</label>
+      <textarea id="jdText" rows="12" placeholder="Paste the job description here..."></textarea>
+    </div>
+    <div class="actions">
+      <button class="primary" id="analyzeBtn">Analyze gap</button>
+    </div>
+    <div id="msgArea"></div>
+  </div>
+
+  <div id="resultArea"></div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('jobmatch.html');
+
+function priorityBadge(p) {
+  const cls = p === 'High' ? 'bad' : p === 'Medium' ? 'warn' : 'good';
+  return `<span class="badge ${cls}">${p}</span>`;
+}
+
+document.getElementById('analyzeBtn').addEventListener('click', async () => {
+  const jobDescriptionText = document.getElementById('jdText').value.trim();
+  const btn = document.getElementById('analyzeBtn');
+  const msgArea = document.getElementById('msgArea');
+  const resultArea = document.getElementById('resultArea');
+  msgArea.innerHTML = '';
+  btn.disabled = true;
+  btn.textContent = 'Analyzing...';
+  try {
+    const result = await api('/jobmatch/analyze', {
+      method: 'POST',
+      body: JSON.stringify({ jobDescriptionText }),
+    });
+    resultArea.innerHTML = `
+      <div class="card">
+        <h2>Role summary</h2>
+        <p>${escapeHtml(result.roleSummary)}</p>
+        <h2>Skill gap analysis</h2>
+        <table>
+          <thead><tr><th>Required skill</th><th>Current level</th><th>Required level</th><th>Gap</th><th>Priority</th><th>Recommended action</th></tr></thead>
+          <tbody>
+            ${result.gaps.map(g => `
+              <tr>
+                <td>${escapeHtml(g.requiredSkill)}</td>
+                <td>${escapeHtml(g.currentLevel)}</td>
+                <td>${escapeHtml(g.requiredLevel)}</td>
+                <td class="small">${escapeHtml(g.gap)}</td>
+                <td>${priorityBadge(g.priority)}</td>
+                <td class="small">${escapeHtml(g.recommendedAction)}</td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <h2>Overall fit</h2>
+        <p>${escapeHtml(result.overallFitSummary)}</p>
+      </div>
+    `;
+  } catch (e) {
+    msgArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
+  }
+  btn.disabled = false;
+  btn.textContent = 'Analyze gap';
+});
+</script>
+</body>
+</html>

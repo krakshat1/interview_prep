@@ -1,0 +1,273 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Mock Interview</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <div class="row" style="align-items:center; margin-bottom: 4px;">
+    <div>
+      <span class="badge" id="categoryBadge">-</span>
+      <span class="badge" id="difficultyBadge">-</span>
+      <span class="badge" id="countBadge">Question 1</span>
+    </div>
+    <div style="text-align:right; flex: 0 0 auto;">
+      <button class="ghost small" id="endBtn">End Interview</button>
+    </div>
+  </div>
+
+  <div id="app"></div>
+</div>
+
+<script src="shared.js"></script>
+<script src="voice.js"></script>
+<script>
+renderNav('interview.html');
+
+const sessionId = sessionStorage.getItem('activeSessionId');
+if (!sessionId) {
+  window.location.href = 'index.html';
+}
+
+let currentQuestion = null;
+let questionIndex = 0;
+let recognizer = null;
+let isRecording = false;
+
+const app = document.getElementById('app');
+
+function setBadges(q) {
+  document.getElementById('categoryBadge').textContent = q.category;
+  document.getElementById('difficultyBadge').textContent = q.difficulty;
+  document.getElementById('countBadge').textContent =
+    `Question ${questionIndex}${q.isFollowUp ? ' (follow-up)' : ''}`;
+}
+
+function renderAskingPhase(q, opts = {}) {
+  setBadges(q);
+  const supported = speechRecognitionSupported();
+  app.innerHTML = `
+    <div class="card">
+      <div class="question-panel">
+        <span class="muted small">${q.isFollowUp ? 'Follow-up question' : 'Interviewer asks'}</span>
+        <div class="qtext">${escapeHtml(q.text)}</div>
+        <button class="ghost small" id="replayBtn">🔊 Replay question</button>
+      </div>
+
+      ${supported ? `
+        <div class="field">
+          <label>Your answer (live transcript)</label>
+          <div class="transcript-box" id="transcriptBox"><span class="muted">Click "Start Answering" and speak your answer...</span></div>
+        </div>
+        <div class="actions">
+          <button class="rec" id="recBtn">🎤 Start Answering</button>
+          <button class="ghost" id="submitBtn" disabled>Submit Answer</button>
+        </div>
+      ` : `
+        <div class="error-banner">Speech recognition isn't supported in this browser. Try Chrome or Edge for voice mode. You can still type your answer below.</div>
+        <div class="field">
+          <label>Your answer</label>
+          <textarea id="manualAnswer" rows="5" placeholder="Type your answer as if you were speaking it..."></textarea>
+        </div>
+        <div class="actions">
+          <button class="primary" id="submitBtn">Submit Answer</button>
+        </div>
+      `}
+    </div>
+  `;
+
+  document.getElementById('replayBtn').addEventListener('click', () => speak(q.text));
+
+  if (supported) {
+    wireRecording();
+  } else {
+    document.getElementById('submitBtn').addEventListener('click', () => {
+      submitAnswer(document.getElementById('manualAnswer').value.trim());
+    });
+  }
+
+  if (!opts.skipSpeak) speak(q.text);
+}
+
+function wireRecording() {
+  const recBtn = document.getElementById('recBtn');
+  const submitBtn = document.getElementById('submitBtn');
+  const box = document.getElementById('transcriptBox');
+  let finalSoFar = '';
+
+  recognizer = createRecognizer({
+    onInterim(interim) {
+      box.innerHTML = escapeHtml(finalSoFar) +
+        (interim ? `<span class="muted"> ${escapeHtml(interim)}</span>` : '');
+    },
+    onFinalChunk(full) {
+      finalSoFar = full;
+      submitBtn.disabled = finalSoFar.length === 0;
+    },
+    onError(err) {
+      if (err === 'no-speech') return;
+      console.error('Speech recognition error:', err);
+    },
+    onEnd(full) {
+      finalSoFar = full;
+      isRecording = false;
+      recBtn.textContent = '🎤 Start Answering';
+      recBtn.classList.remove('recording');
+      submitBtn.disabled = finalSoFar.length === 0;
+    },
+  });
+
+  recBtn.addEventListener('click', () => {
+    if (!isRecording) {
+      finalSoFar = '';
+      box.innerHTML = '<span class="muted">Listening...</span>';
+      recognizer.start();
+      isRecording = true;
+      recBtn.textContent = '⏹ Stop & Review';
+      recBtn.classList.add('recording');
+      submitBtn.disabled = true;
+    } else {
+      recognizer.stop();
+    }
+  });
+
+  submitBtn.addEventListener('click', () => {
+    submitAnswer(recognizer.getTranscript());
+  });
+}
+
+async function submitAnswer(transcript) {
+  if (isRecording && recognizer) recognizer.stop();
+  stopSpeaking();
+  app.innerHTML = `<div class="card"><span class="spinner"></span> Evaluating your answer...</div>`;
+
+  try {
+    const result = await api(`/interview/${sessionId}/submit`, {
+      method: 'POST',
+      body: JSON.stringify({ transcript }),
+    });
+    renderFeedback(result.evaluation, result.fillerStats, transcript, result.next);
+  } catch (e) {
+    app.innerHTML = `<div class="error-banner">Evaluation failed: ${escapeHtml(e.message)}</div>
+      <button class="primary" id="retryBtn">Retry</button>`;
+    document.getElementById('retryBtn').addEventListener('click', () => submitAnswer(transcript));
+  }
+}
+
+function scoreBox(label, val) {
+  return `<div class="score-box"><div class="num badge ${scoreClass(val)}" style="font-size:22px;border:none;background:none;padding:0;">${val}/10</div><div class="label">${label}</div></div>`;
+}
+
+function correctnessBadge(c) {
+  const map = { correct: ['good', 'Correct'], partially_correct: ['warn', 'Partially Correct'], incorrect: ['bad', 'Incorrect'] };
+  const [cls, label] = map[c] || ['warn', c];
+  return `<span class="badge ${cls}">${label}</span>`;
+}
+
+function renderFeedback(evaluation, fillerStats, transcript, next) {
+  const fillerChips = Object.entries(fillerStats?.breakdown || {})
+    .map(([word, count]) => `<span class="chip">${escapeHtml(word)} × ${count}</span>`)
+    .join('');
+  app.innerHTML = `
+    <div class="card">
+      <div class="row" style="align-items:center;">
+        <h2 style="margin:0;">Feedback</h2>
+        ${correctnessBadge(evaluation.correctness)}
+      </div>
+      <p class="muted" style="font-style:italic; margin-top:10px;">"${escapeHtml(evaluation.interviewerRemark || '')}"</p>
+
+      <div class="score-grid">
+        ${scoreBox('Technical', evaluation.technicalScore)}
+        ${scoreBox('Communication', evaluation.communicationScore)}
+        ${scoreBox('Confidence', evaluation.confidenceScore)}
+      </div>
+
+      <div class="row">
+        <div>
+          <h3>What you did well</h3>
+          <ul class="clean">${(evaluation.strengths || []).map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">-</li>'}</ul>
+        </div>
+        <div>
+          <h3>Missing concepts</h3>
+          <ul class="clean">${(evaluation.missingConcepts || []).map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">None - nice and complete.</li>'}</ul>
+        </div>
+      </div>
+
+      <h3>Communication notes</h3>
+      <ul class="clean">${(evaluation.communicationIssues || []).map(s => `<li>${escapeHtml(s)}</li>`).join('') || '<li class="muted">No major issues.</li>'}</ul>
+
+      <h3>Filler words</h3>
+      <p>
+        <span class="badge ${fillerStats?.totalFillerWords > 3 ? 'bad' : fillerStats?.totalFillerWords > 0 ? 'warn' : 'good'}">${fillerStats?.totalFillerWords ?? 0} filler word${fillerStats?.totalFillerWords === 1 ? '' : 's'}</span>
+        <span class="muted small">(${fillerStats?.wordCount ?? 0} words total, ${((fillerStats?.fillerRate ?? 0) * 100).toFixed(1)}% filler rate)</span>
+      </p>
+      ${fillerChips ? `<div class="chip-list">${fillerChips}</div>` : ''}
+
+      <h3>Your transcript</h3>
+      <div class="transcript-box small">${escapeHtml(transcript) || '<span class="muted">(empty)</span>'}</div>
+
+      <h3>Recommended professional answer</h3>
+      <div class="card" style="background: var(--bg-elev-2); margin-bottom:0;">${escapeHtml(evaluation.recommendedAnswer)}</div>
+
+      <div class="actions">
+        <button class="primary" id="nextBtn">${next.type === 'session_complete' ? 'View Report' : (next.type === 'follow_up' ? 'Continue → Follow-up' : 'Next Question →')}</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('nextBtn').addEventListener('click', () => {
+    if (next.type === 'session_complete') {
+      sessionStorage.removeItem('activeSessionId');
+      window.location.href = `reports.html?session=${sessionId}`;
+      return;
+    }
+    questionIndex += 1;
+    currentQuestion = next.question;
+    renderAskingPhase(currentQuestion);
+  });
+}
+
+document.getElementById('endBtn').addEventListener('click', async () => {
+  if (!confirm('End this interview now and view your report?')) return;
+  stopSpeaking();
+  if (isRecording && recognizer) recognizer.stop();
+  try {
+    await api(`/interview/${sessionId}/end`, { method: 'POST' });
+  } catch (e) {}
+  sessionStorage.removeItem('activeSessionId');
+  window.location.href = `reports.html?session=${sessionId}`;
+});
+
+// --- init ---
+const stored = sessionStorage.getItem('firstQuestion');
+if (stored) {
+  questionIndex = 1;
+  currentQuestion = JSON.parse(stored);
+  sessionStorage.removeItem('firstQuestion');
+  renderAskingPhase(currentQuestion);
+} else if (sessionId) {
+  // resumed page load without a fresh "first question" (e.g. refresh) - refetch session state
+  api(`/interview/${sessionId}`).then((session) => {
+    if (session.status === 'completed' || !session.pending) {
+      window.location.href = `reports.html?session=${sessionId}`;
+      return;
+    }
+    questionIndex = session.turns.length + 1;
+    currentQuestion = {
+      text: session.pending.questionText,
+      category: session.pending.category,
+      difficulty: session.pending.difficulty,
+      isFollowUp: session.pending.source === 'followup',
+    };
+    renderAskingPhase(currentQuestion, { skipSpeak: false });
+  }).catch(() => { window.location.href = 'index.html'; });
+}
+</script>
+</body>
+</html>
