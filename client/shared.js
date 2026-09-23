@@ -26,6 +26,7 @@ function renderNav(active) {
       { href: 'index.html', label: 'Mock Interview' },
       { href: 'practice.html', label: 'Code & SQL' },
       { href: 'systemdesign.html', label: 'System Design' },
+      { href: 'papers.html', label: 'Papers' },
       // Question Bank management is admin-only - everyone else still gets
       // its questions inside mock interviews, just not the edit/delete UI.
       ...(role === 'admin' ? [{ href: 'bank.html', label: 'Question Bank' }] : []),

@@ -2,6 +2,7 @@
 module.exports = {
   auth: require('./auth'),
   questions: require('./questions'),
+  papers: require('./papers'),
   interview: require('./interview'),
   reports: require('./reports'),
   profile: require('./profile'),

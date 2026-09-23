@@ -1,0 +1,310 @@
+[
+  {
+    "id": "paper-attention",
+    "order": 1,
+    "title": "Attention Is All You Need",
+    "authors": "Vaswani et al.",
+    "year": 2017,
+    "arxivUrl": "https://arxiv.org/abs/1706.03762",
+    "group": "Transformer Foundations",
+    "oneLiner": "The paper that introduced the Transformer - the architecture almost every modern AI model is built on.",
+    "simpleExplanation": "Before this paper, models read text one word at a time, in order, like reading a sentence with your finger under each word - which is slow and makes it hard to remember something from many words ago. This paper's big idea was 'attention': instead of reading in order, let every word directly look at every other word at once and decide which ones matter most for understanding it. Drop the step-by-step reading entirely and you get a model that trains much faster on modern hardware and handles long sentences better. This one idea became the 'T' in GPT, BERT, and basically every large language model since.",
+    "whyItMatters": [
+      "It's the architecture underneath ChatGPT, Claude, and nearly every modern language model.",
+      "Understanding it explains why LLMs can be trained fast in parallel, unlike older models.",
+      "Every other paper on this list either builds on it or extends it."
+    ],
+    "keyConcepts": [
+      "Self-attention",
+      "Query, Key, Value",
+      "Multi-head attention",
+      "Positional encoding",
+      "Encoder-decoder architecture",
+      "Transformer scaling"
+    ]
+  },
+  {
+    "id": "paper-bert",
+    "order": 2,
+    "title": "BERT: Pre-training of Deep Bidirectional Transformers",
+    "authors": "Devlin et al.",
+    "year": 2018,
+    "arxivUrl": "https://arxiv.org/abs/1810.04805",
+    "group": "Transformer Foundations",
+    "oneLiner": "Trained a model to understand text by reading it in both directions at once, then reused it for many tasks.",
+    "simpleExplanation": "Imagine a fill-in-the-blank game: 'The cat sat on the ___.' To guess 'mat', you use words from both before AND after the blank. BERT trains a model to play exactly this game on huge amounts of text, which forces it to build a genuinely deep understanding of language - not just what's likely to come next, but what a word means given everything around it. Once trained, that same understanding can be reused (fine-tuned) for many different tasks - spam detection, question answering, sentiment analysis - without starting from scratch each time.",
+    "whyItMatters": [
+      "Popularized the 'pretrain once, fine-tune for many tasks' workflow still used today.",
+      "Shows why reading in both directions gives richer understanding than reading left-to-right only.",
+      "The direct ancestor of most search and classification systems built on Transformers."
+    ],
+    "keyConcepts": [
+      "Bidirectional attention",
+      "Pretraining",
+      "Masked language modeling",
+      "Fine-tuning",
+      "Transfer learning",
+      "Encoder-only Transformers"
+    ]
+  },
+  {
+    "id": "paper-rope",
+    "order": 3,
+    "title": "RoFormer: Enhanced Transformer With Rotary Position Embedding",
+    "authors": "Su et al.",
+    "year": 2021,
+    "arxivUrl": "https://arxiv.org/abs/2104.09864",
+    "group": "Transformer Foundations",
+    "oneLiner": "A cleaner way to tell a Transformer where each word sits in a sentence, using rotation instead of addition.",
+    "simpleExplanation": "A Transformer looks at all words at once, so on its own it has no sense of order - 'dog bites man' and 'man bites dog' would look the same to it without help. Earlier models added a fixed 'position number' to each word to fix this. RoPE (rotary position embedding) does something smarter: it rotates each word's representation by an amount based on its position, like turning a dial. The neat trick is that when two words are compared, the rotations naturally cancel out to reveal how far apart they are - so the model learns relative distance between words for free, which turns out to work especially well for very long text.",
+    "whyItMatters": [
+      "Used in LLaMA, Mistral, and most modern open-weight LLMs instead of older position methods.",
+      "Explains why some models handle long documents and long conversations better than others.",
+      "Comes up often in interviews about how decoder-only LLMs are actually built."
+    ],
+    "keyConcepts": [
+      "Positional embeddings",
+      "Relative position",
+      "Rotary embeddings",
+      "Attention geometry",
+      "Long-context considerations"
+    ]
+  },
+  {
+    "id": "paper-llama",
+    "order": 4,
+    "title": "LLaMA: Open and Efficient Foundation Language Models",
+    "authors": "Touvron et al.",
+    "year": 2023,
+    "arxivUrl": "https://arxiv.org/abs/2302.13971",
+    "group": "Transformer Foundations",
+    "oneLiner": "Showed that a smaller model trained on more data for longer can beat a bigger model trained the 'normal' way.",
+    "simpleExplanation": "At the time, the common belief was 'bigger model = better model', which meant only huge companies with huge compute budgets could build strong AI. Meta's LLaMA paper showed a different path: take a much smaller model (as small as 7 billion parameters) but train it on far more text than usual, using only publicly available data, and it can match or beat models many times its size. This mattered enormously because it meant strong language models no longer required a massive proprietary dataset or an enormous model - it kicked off the open-weight LLM ecosystem (Mistral, Llama-derived fine-tunes, and more) that exists today.",
+    "whyItMatters": [
+      "Kicked off the modern open-weight LLM ecosystem that tools like Ollama and vLLM are built around.",
+      "Good case study in the tradeoff between model size, training data size, and compute cost.",
+      "Directly relevant if you've ever run a local or self-hosted LLM."
+    ],
+    "keyConcepts": [
+      "Foundation model training",
+      "Dataset composition",
+      "Scaling",
+      "Compute efficiency",
+      "Small-to-large model tradeoffs",
+      "Open model ecosystems"
+    ]
+  },
+  {
+    "id": "paper-adapters",
+    "order": 5,
+    "title": "Parameter-Efficient Transfer Learning for NLP",
+    "authors": "Houlsby et al.",
+    "year": 2019,
+    "arxivUrl": "https://arxiv.org/abs/1902.00751",
+    "group": "Efficient Model Adaptation",
+    "oneLiner": "Instead of retraining an entire model for a new task, insert small trainable modules and freeze the rest.",
+    "simpleExplanation": "Fully retraining a large pretrained model for every new task is expensive and wasteful - you end up with a full copy of the model for each task. This paper's idea: freeze almost the whole pretrained model (its knowledge stays locked in place) and insert small 'adapter' modules between its layers. Only those small adapters get trained for a new task. The result is nearly the same accuracy as full fine-tuning, but you only need to store and swap a small adapter per task instead of a whole separate model.",
+    "whyItMatters": [
+      "The original idea behind today's parameter-efficient fine-tuning (PEFT) methods, including LoRA.",
+      "Explains why you can have many task-specific 'personalities' of one base model cheaply.",
+      "Good grounding before learning LoRA, since LoRA is a more efficient evolution of this idea."
+    ],
+    "keyConcepts": [
+      "Adapters",
+      "Transfer learning",
+      "Parameter efficiency",
+      "Frozen pretrained weights",
+      "Multi-task model reuse"
+    ]
+  },
+  {
+    "id": "paper-lora",
+    "order": 6,
+    "title": "LoRA: Low-Rank Adaptation of Large Language Models",
+    "authors": "Hu et al.",
+    "year": 2021,
+    "arxivUrl": "https://arxiv.org/abs/2106.09685",
+    "group": "Efficient Model Adaptation",
+    "oneLiner": "Fine-tunes huge models by training two tiny matrices instead of touching the model's billions of weights.",
+    "simpleExplanation": "Fine-tuning a large language model normally means updating every one of its billions of weights, which needs a lot of GPU memory and produces a huge file per fine-tuned version. LoRA's insight: you don't need to change every weight directly - you can approximate the update to each weight matrix using the product of two much smaller matrices. Only those two small matrices get trained; the original model stays frozen underneath. This cuts GPU memory needs dramatically, shrinks the 'fine-tuned' file from gigabytes to megabytes, and lets you keep several different LoRA adapters around and swap between them on the same base model.",
+    "whyItMatters": [
+      "The single most common way people fine-tune open-weight LLMs today (often as QLoRA, its quantized version).",
+      "Makes fine-tuning possible on a single consumer GPU instead of a data center.",
+      "Directly practical: most 'custom' fine-tuned models you see on Hugging Face are LoRA adapters."
+    ],
+    "keyConcepts": [
+      "Parameter-efficient fine-tuning",
+      "Lower GPU memory requirements",
+      "Smaller training artifacts",
+      "Multiple task-specific adapters",
+      "Foundation for practical LLM fine-tuning"
+    ]
+  },
+  {
+    "id": "paper-vit",
+    "order": 7,
+    "title": "An Image Is Worth 16x16 Words (Vision Transformer)",
+    "authors": "Dosovitskiy et al.",
+    "year": 2020,
+    "arxivUrl": "https://arxiv.org/abs/2010.11929",
+    "group": "Multimodal & Vision AI",
+    "oneLiner": "Chopped an image into patches and fed them to a Transformer like words in a sentence.",
+    "simpleExplanation": "For years, image AI meant convolutional neural networks (CNNs), which slide small filters across an image to detect edges, shapes, and textures. This paper asked: what if we treat an image like a sentence instead? Cut the image into a grid of small patches (say, 16x16 pixels each), flatten each patch into a vector, and feed the sequence of patches into the exact same Transformer architecture used for text. It turns out this works surprisingly well, especially with enough training data - and it means the same core architecture can now handle both text and images, which is a big step toward multimodal AI.",
+    "whyItMatters": [
+      "Proved Transformers aren't just for text - the same idea generalizes to other data types.",
+      "The foundation for image encoders used in today's multimodal models (e.g. models that can 'see' images).",
+      "Good example of how one architectural idea (attention) keeps getting reused across domains."
+    ],
+    "keyConcepts": [
+      "Image patch embeddings",
+      "Vision Transformers",
+      "Tokenization beyond text",
+      "Self-attention for computer vision",
+      "Multimodal architecture foundations"
+    ]
+  },
+  {
+    "id": "paper-gan",
+    "order": 8,
+    "title": "Generative Adversarial Networks",
+    "authors": "Goodfellow et al.",
+    "year": 2014,
+    "arxivUrl": "https://arxiv.org/abs/1406.2661",
+    "group": "Generative AI",
+    "oneLiner": "Trains two networks against each other - a forger and a detective - until the forgeries look real.",
+    "simpleExplanation": "A GAN is two neural networks playing a competitive game. The Generator tries to create fake data (e.g. fake images) that look real. The Discriminator tries to tell real data apart from the Generator's fakes. Every round, the Generator gets feedback on what gave it away and improves; the Discriminator also gets better at spotting fakes. Trained against each other long enough, the Generator's fakes become good enough to fool even a well-trained detector - which is how GANs generate realistic images, faces, and art without ever being explicitly told 'this is what a face looks like'.",
+    "whyItMatters": [
+      "The generative-modeling idea that popularized AI-generated images before diffusion models took over.",
+      "Understanding the adversarial-training concept helps you reason about other adversarial setups (e.g. red-teaming, adversarial robustness).",
+      "'Mode collapse' - a classic GAN failure mode - is a useful concept for understanding why some generative models produce repetitive output."
+    ],
+    "keyConcepts": [
+      "Generator / discriminator",
+      "Minimax optimization",
+      "Adversarial training",
+      "Implicit generative models",
+      "Mode collapse",
+      "Generative modeling"
+    ]
+  },
+  {
+    "id": "paper-vae",
+    "order": 9,
+    "title": "Auto-Encoding Variational Bayes",
+    "authors": "Kingma & Welling",
+    "year": 2013,
+    "arxivUrl": "https://arxiv.org/abs/1312.6114",
+    "group": "Generative AI",
+    "oneLiner": "Compresses data into a fuzzy, continuous 'idea space' you can sample from to generate new, similar data.",
+    "simpleExplanation": "A Variational Autoencoder (VAE) has two halves: an encoder that squeezes an input (like an image) down into a compact numeric summary, and a decoder that reconstructs the image back out of that summary. The clever part is that the encoder is trained to produce a summary that behaves like a smooth, continuous 'probability cloud' rather than one fixed point. Because that space is smooth, you can pick a random point in it (or nudge an existing point slightly) and decode it into a brand-new, plausible output - which is how VAEs generate new data. This math trick (the 'reparameterization trick') for training through randomness is still used in many generative models today.",
+    "whyItMatters": [
+      "One of the three foundational generative-model families, alongside GANs and diffusion models.",
+      "The 'latent space' idea (a compressed, meaningful representation of data) shows up constantly in AI - embeddings are a close relative.",
+      "The reparameterization trick it introduced is a building block used well beyond VAEs."
+    ],
+    "keyConcepts": [
+      "Variational inference",
+      "Latent-variable models",
+      "Encoder/decoder architecture",
+      "Reparameterization trick",
+      "ELBO",
+      "Variational Autoencoders"
+    ]
+  },
+  {
+    "id": "paper-diffusion",
+    "order": 10,
+    "title": "Denoising Diffusion Probabilistic Models",
+    "authors": "Ho, Jain & Abbeel",
+    "year": 2020,
+    "arxivUrl": "https://arxiv.org/abs/2006.11239",
+    "group": "Generative AI",
+    "oneLiner": "Generates images by learning to undo noise, one small step at a time, starting from pure static.",
+    "simpleExplanation": "Take a clean image and gradually add random noise to it over many steps until it becomes pure static - that's easy to do and gives you training data. This paper trains a model to do the reverse: given a noisy image, predict a slightly less noisy version of it. Chain that 'remove a little noise' step many times in a row, starting from pure random static, and the model gradually sculpts it into a coherent, realistic image. This step-by-step denoising process turned out to produce sharper, more controllable images than GANs, and it's the technique behind image generators like Stable Diffusion and Midjourney.",
+    "whyItMatters": [
+      "The technique underneath modern image generators (Stable Diffusion, Midjourney, DALL-E's later versions).",
+      "Largely replaced GANs as the state of the art for image generation.",
+      "The same 'gradually denoise' idea is now being explored for text and other data types too."
+    ],
+    "keyConcepts": [
+      "Forward diffusion",
+      "Reverse diffusion",
+      "Noise prediction",
+      "Score-based ideas",
+      "Generative image models"
+    ]
+  },
+  {
+    "id": "paper-rag",
+    "order": 11,
+    "title": "Retrieval-Augmented Generation for Knowledge-Intensive NLP Tasks",
+    "authors": "Lewis et al.",
+    "year": 2020,
+    "arxivUrl": "https://arxiv.org/abs/2005.11401",
+    "group": "Knowledge-Augmented AI",
+    "oneLiner": "The original paper behind RAG: give a language model a search engine instead of making it memorize everything.",
+    "simpleExplanation": "A language model's knowledge is 'baked in' during training and goes stale the moment training ends - it also can't know anything from your private documents. This paper's fix: before generating an answer, first search an external collection of documents for the most relevant ones (using a neural retriever, not plain keyword search), then hand those documents to the model as extra context alongside the question. The model now combines what it already knows (parametric memory) with what it just looked up (non-parametric memory) to write its answer. This is exactly the pattern every RAG chatbot uses today - it's just been engineered further since.",
+    "whyItMatters": [
+      "The direct academic origin of every RAG system built with LangChain, LlamaIndex, or similar tools today.",
+      "Explains the core reasoning behind why RAG reduces hallucination and can cite sources.",
+      "Understanding the original design helps you reason about where a production RAG pipeline (chunking, embeddings, reranking) deviates from and improves on it."
+    ],
+    "keyConcepts": [
+      "Retrieval-augmented generation",
+      "Dense retrieval",
+      "External knowledge",
+      "Parametric vs. non-parametric memory",
+      "Retrieval + generation architecture",
+      "Knowledge-intensive QA"
+    ]
+  },
+  {
+    "id": "paper-moe",
+    "order": 12,
+    "title": "Switch Transformers: Scaling with Mixture-of-Experts",
+    "authors": "Fedus, Zoph & Shazeer",
+    "year": 2021,
+    "arxivUrl": "https://arxiv.org/abs/2101.03961",
+    "group": "Scaling AI Systems",
+    "oneLiner": "Builds huge models where only a small slice of the network activates for each input, keeping it fast.",
+    "simpleExplanation": "Normally, making a model bigger means every single input has to pass through every single part of the network - more parameters directly means more compute per request. Mixture-of-Experts breaks the network into many smaller 'expert' sub-networks and adds a small router that picks just one or two experts to handle each input, rather than running all of them. This means the total model can have an enormous number of parameters (and therefore a lot of stored knowledge and capacity) while the actual computation for any single request stays small, because only a sliver of the model activates. This is why some of today's largest models can be huge in parameter count but still relatively fast to run.",
+    "whyItMatters": [
+      "The architecture behind several of today's largest and most efficient frontier models.",
+      "Explains how a model can have huge total capacity without a proportionally huge cost per query.",
+      "Introduces real engineering challenges (routing, load balancing across experts) worth knowing about for MLOps/infra interviews."
+    ],
+    "keyConcepts": [
+      "Mixture of Experts",
+      "Sparse activation",
+      "Expert routing",
+      "Conditional computation",
+      "Scaling laws",
+      "Distributed training challenges"
+    ]
+  },
+  {
+    "id": "paper-instructgpt",
+    "order": 13,
+    "title": "Training Language Models to Follow Instructions With Human Feedback (InstructGPT)",
+    "authors": "Ouyang et al.",
+    "year": 2022,
+    "arxivUrl": "https://arxiv.org/abs/2203.02155",
+    "group": "Alignment & Agents",
+    "oneLiner": "The paper that taught raw language models to actually follow instructions and be helpful, not just autocomplete text.",
+    "simpleExplanation": "A raw pretrained language model is just very good at predicting the next word - if you ask it a question, it might just continue the sentence instead of actually answering. This paper (the origin of what became ChatGPT-style behavior) fixes that in three stages. First, humans write examples of good responses to instructions, and the model is fine-tuned on those (supervised fine-tuning). Second, humans rank several of the model's own responses from best to worst, and a separate 'reward model' is trained to predict those human preferences. Third, the original model is further trained with reinforcement learning to produce responses that score highly according to that reward model. The result is a model that's noticeably more helpful, more instruction-following, and safer than the raw pretrained version - this three-stage recipe is what people mean by RLHF.",
+    "whyItMatters": [
+      "The reason ChatGPT and Claude feel like helpful assistants instead of raw autocomplete engines.",
+      "RLHF (and its cheaper cousins like DPO) is a near-guaranteed topic in any GenAI/LLM interview.",
+      "Explains the difference between a 'base model' and a 'chat' or 'instruct' model you download."
+    ],
+    "keyConcepts": [
+      "Supervised fine-tuning",
+      "Human demonstrations",
+      "Preference modeling",
+      "RLHF",
+      "Reward models",
+      "Instruction following",
+      "Alignment"
+    ]
+  }
+]

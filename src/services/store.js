@@ -16,6 +16,7 @@ const QUESTIONS_FILE = path.join(DATA_DIR, 'questions.json');
 const CODING_PROBLEMS_FILE = path.join(DATA_DIR, 'codingProblems.json');
 const SQL_PROBLEMS_FILE = path.join(DATA_DIR, 'sqlProblems.json');
 const SYSTEM_DESIGN_PROBLEMS_FILE = path.join(DATA_DIR, 'systemDesignProblems.json');
+const PAPERS_FILE = path.join(DATA_DIR, 'papers.json');
 const ACCOUNTS_FILE = path.join(DATA_DIR, 'accounts.json');
 const AUTH_SESSIONS_FILE = path.join(DATA_DIR, 'authSessions.json');
 const USERS_DIR = path.join(DATA_DIR, 'users');
@@ -52,6 +53,17 @@ function getQuestions() {
 
 function saveQuestions(questions) {
   writeJson(QUESTIONS_FILE, questions);
+}
+
+// ---- Research papers reading list (shared across every account,
+// admin-managed) - a curated set of foundational AI papers, each with a
+// plain-language explanation alongside the original technical concepts. ----
+function getPapers() {
+  return readJson(PAPERS_FILE, []);
+}
+
+function savePapers(papers) {
+  writeJson(PAPERS_FILE, papers);
 }
 
 // ---- Personal questions (e.g. resume-defense questions generated from a
@@ -252,6 +264,8 @@ function migrateLegacyDataToFirstAccount(userId) {
 module.exports = {
   getQuestions,
   saveQuestions,
+  getPapers,
+  savePapers,
   getUserQuestions,
   saveUserQuestions,
   getSessionIndex,
