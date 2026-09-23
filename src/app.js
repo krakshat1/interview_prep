@@ -25,6 +25,7 @@ app.get('/api/health', (req, res) => {
 app.use('/api', requireAuth);
 
 app.use('/api/questions', routes.questions);
+app.use('/api/papers', routes.papers);
 app.use('/api/interview', routes.interview);
 app.use('/api/reports', routes.reports);
 app.use('/api/profile', routes.profile);

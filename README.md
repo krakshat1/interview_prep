@@ -70,6 +70,11 @@ rather just practice ad hoc.
   Optimization, Probability & Statistics, Information Theory), SQL, Coding &
   DSA, Data Analysis, Machine Learning, Deep Learning, Generative AI/LLMs,
   MLOps, System Design, and Behavioral/HR.
+- **Papers** - a curated reading list of 14 foundational AI papers (Attention
+  Is All You Need, BERT, LoRA, RAG, diffusion models, RLHF/InstructGPT, and
+  more), each led by a plain-English explanation for readers who don't want to
+  read the original - with the technical concepts and an arXiv link one click
+  away for readers who do.
 - **Reports** - session history, a score trend chart, and detailed per-
   session reports (coaching summary, recurring issues, missed concepts,
   recommended next questions).
@@ -103,7 +108,7 @@ src/
     sqlSandbox.js          Runs submitted SQL against a seeded SQLite DB
     filler.js, questionSelector.js, report.js
 client/                  Static front end (HTML pages, style.css, shared.js, theme.js, voice.js)
-data/                    Seed content (questions, coding/SQL/system-design problems)
+data/                    Seed content (questions, coding/SQL/system-design problems, papers)
                          plus your personal data (accounts, sessions, mastery) - gitignored
 scripts/                 Maintenance scripts (reset-password.js)
 tests/                   API smoke tests (npm test)

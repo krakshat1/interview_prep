@@ -7,7 +7,7 @@ const os = require('os');
 const path = require('path');
 
 const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'interview-prep-test-'));
-for (const f of ['questions', 'codingProblems', 'sqlProblems', 'systemDesignProblems']) {
+for (const f of ['questions', 'codingProblems', 'sqlProblems', 'systemDesignProblems', 'papers']) {
   fs.copyFileSync(path.join(__dirname, '..', 'data', f + '.json'), path.join(tmp, f + '.json'));
 }
 process.env.DATA_DIR = tmp;
@@ -65,6 +65,15 @@ test('signup, then read the question bank; first account is admin', async () => 
   const q = await call('GET', '/api/questions');
   assert.strictEqual(q.status, 200);
   assert.ok(Array.isArray(q.json) && q.json.length > 300);
+});
+
+test('papers list is readable once signed in, and filters by group', async () => {
+  const all = await call('GET', '/api/papers');
+  assert.strictEqual(all.status, 200);
+  assert.ok(Array.isArray(all.json) && all.json.length > 5);
+  const group = all.json[0].group;
+  const filtered = await call('GET', '/api/papers?group=' + encodeURIComponent(group));
+  assert.ok(filtered.json.every((p) => p.group === group));
 });
 
 test('duplicate signup is rejected and wrong password fails login', async () => {
