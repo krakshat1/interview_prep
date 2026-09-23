@@ -35,10 +35,20 @@ resume text, job descriptions).
 
 ## Using it
 
-Start at **Roadmap** (or the "Set up my roadmap" prompt on the home page) to
-get a personalized plan - everything else works standalone too if you'd
-rather just practice ad hoc.
+New here, or not sure any of this will actually help you? Start at
+**Start Here** (the post-login landing page) - it explains in plain words what
+each part is for, gives you one small 10-minute task if you can't find the
+motivation to begin, and points you at onboarding if you're not sure where to
+start at all. Once you're past that, **Roadmap** generates a personalized
+plan - everything else also works standalone if you'd rather just practice ad
+hoc.
 
+- **Start Here** - the landing page after login. Written for someone who's
+  confused about how any of this helps, or has zero motivation to open it:
+  a plain-English map of what each feature is for and which real interview
+  round it practices, a "give me one 10-minute task" shortcut for low-
+  motivation days, and a "welcome back" summary (readiness %, what's due for
+  review) once you have a profile and some history.
 - **Dashboard** - your *measured* readiness per skill area (Python, SQL, Math
   & Stats, ML, DL, LLM/AI Engineering, MLOps, Coding, System Design,
   Behavioral), computed from actual practice/interview data via a spaced-

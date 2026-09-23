@@ -59,7 +59,7 @@ async function submit() {
     });
     const body = await res.json();
     if (!res.ok) throw new Error(body.error || 'Sign up failed');
-    window.location.href = 'index.html';
+    window.location.href = 'start.html';
   } catch (e) {
     errorArea.innerHTML = `<div class="error-banner">${escapeHtml(e.message)}</div>`;
     btn.disabled = false; btn.textContent = 'Sign Up';

@@ -21,6 +21,7 @@ function renderNav(active) {
 
   function paint(role) {
     const items = [
+      { href: 'start.html', label: 'Start Here' },
       { href: 'dashboard.html', label: 'Dashboard' },
       { href: 'roadmap.html', label: 'Roadmap' },
       { href: 'index.html', label: 'Mock Interview' },

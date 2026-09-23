@@ -1,0 +1,205 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Start Here</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  .map-row { display: grid; grid-template-columns: 160px 170px 1fr; gap: 14px; padding: 10px 0; border-bottom: 1px solid var(--border); align-items: baseline; }
+  .map-row:last-child { border-bottom: none; }
+  .map-row .feature { font-weight: 600; }
+  .map-row .round { color: var(--text-dim); font-size: 13px; }
+  .step-list { counter-reset: step; list-style: none; margin: 0; padding: 0; }
+  .step-list li { counter-increment: step; display: flex; gap: 14px; margin-bottom: 16px; align-items: flex-start; }
+  .step-list li::before {
+    content: counter(step);
+    flex: 0 0 auto; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--accent); color: var(--on-accent);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 13px; font-weight: 700;
+  }
+  .tiny-actions { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  .welcome-back { border-color: var(--accent); }
+  .due-chip-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+  .due-chip { background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px; font-size: 13px; }
+  .due-chip a { font-weight: 600; }
+  .pep-talk { border-left: 3px solid var(--good); padding: 2px 0 2px 16px; margin-top: 4px; }
+  @media (max-width: 640px) {
+    .map-row { grid-template-columns: 1fr; gap: 2px; }
+  }
+</style>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+
+  <h1>Start here</h1>
+  <p class="subtitle" id="subtitle">If you're not sure this tool can actually help you, or you can't find the motivation to open it - read this first.</p>
+
+  <div id="welcomeBack"></div>
+
+  <div class="card">
+    <h2>The honest version of what this is</h2>
+    <p>
+      You don't get hired by "knowing AI" in some general sense - you get hired by clearing a
+      specific sequence of interview rounds. Most self-taught people fail one of them not
+      because they're not smart enough, but because they never practiced that <em>specific
+      round</em> before the real interview. Each part of this tool exists to give you a low-stakes
+      place to practice one of those rounds, and to actually measure whether you're improving
+      instead of just guessing.
+    </p>
+  </div>
+
+  <div class="card">
+    <h2>What each part is actually for</h2>
+    <div class="map-row">
+      <span class="feature">Roadmap</span>
+      <span class="round">Removes decision fatigue</span>
+      <span>You don't have to figure out what to study today - it plans your days for you, in order.</span>
+    </div>
+    <div class="map-row">
+      <span class="feature">Mock Interview</span>
+      <span class="round">The technical/verbal round</span>
+      <span>Practices the actual moment of being asked a question out loud and having to answer under a little pressure, before that happens for real.</span>
+    </div>
+    <div class="map-row">
+      <span class="feature">Code &amp; SQL</span>
+      <span class="round">The technical coding round</span>
+      <span>Graded by actually running your code - so "I think this works" turns into "I know this works."</span>
+    </div>
+    <div class="map-row">
+      <span class="feature">System Design</span>
+      <span class="round">The design round</span>
+      <span>The round most self-taught people are weakest at, simply because they've never had a reason to do it before.</span>
+    </div>
+    <div class="map-row">
+      <span class="feature">Papers</span>
+      <span class="round">Vocabulary &amp; concepts</span>
+      <span>For when you don't even know the words yet - plain-English first, technical detail only if you want it.</span>
+    </div>
+    <div class="map-row">
+      <span class="feature">Dashboard</span>
+      <span class="round">Reality check</span>
+      <span>Real proof of progress, measured from what you've actually done - not a vague feeling of "do I know this or not."</span>
+    </div>
+    <div class="map-row">
+      <span class="feature">Resume / Job Match / Applications</span>
+      <span class="round">The actual job hunt</span>
+      <span>Defends the claims on your resume, checks you against real job descriptions, and tracks where you've applied.</span>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Zero motivation today? Don't aim for "study AI." Aim for this.</h2>
+    <p class="muted">Motivation usually shows up <em>after</em> you start, not before. So skip deciding - just do one small, low-stakes thing right now:</p>
+    <div class="tiny-actions">
+      <button class="primary" id="tinyQuestionBtn">Answer one easy question (10 min)</button>
+      <a href="papers.html"><button class="ghost">Read one paper in plain English (5 min)</button></a>
+    </div>
+    <p class="muted small" id="tinyStatus" style="margin-top:10px;"></p>
+  </div>
+
+  <div class="card">
+    <h2>Completely lost on where to even start?</h2>
+    <ol class="step-list">
+      <li>
+        <div>
+          <strong>Set up your roadmap</strong> (about 2 minutes) - tell it your target role and how
+          much time you have per day.
+          <div style="margin-top:6px;"><a href="onboarding.html"><button class="primary">Set up my roadmap</button></a></div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Do today's plan item</strong> - it tells you exactly one thing to do next, instead
+          of an overwhelming list.
+          <div style="margin-top:6px;"><a href="roadmap.html"><button class="ghost">Open Roadmap</button></a></div>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Check your Dashboard once a week</strong>, not every day - that's often enough to
+          see real movement and stay motivated by actual evidence.
+          <div style="margin-top:6px;"><a href="dashboard.html"><button class="ghost">Open Dashboard</button></a></div>
+        </div>
+      </li>
+    </ol>
+  </div>
+
+  <div class="card">
+    <div class="pep-talk">
+      <p class="muted" style="margin:0;">
+        You don't need to feel ready or motivated before you start - the practice is what
+        creates both of those, not the other way around. You don't need to beat anyone else,
+        either; the Dashboard only ever compares you to your own past attempts. Do one question
+        today. That's the whole plan for right now.
+      </p>
+    </div>
+  </div>
+</div>
+<script src="shared.js"></script>
+<script>
+renderNav('start.html');
+
+async function loadWelcomeBack() {
+  try {
+    const profile = await api('/profile');
+    if (!profile) return; // first-time visitor - the "completely lost" card above is the path
+
+    const dash = await api('/dashboard');
+    const overall = dash.readiness.overall;
+    const due = dash.dueForReview.slice(0, 4);
+    const hasHistory = dash.totalSessions > 0;
+
+    document.getElementById('subtitle').textContent =
+      "Welcome back - here's exactly where you left off.";
+
+    document.getElementById('welcomeBack').innerHTML = `
+      <div class="card welcome-back">
+        <h2>Welcome back</h2>
+        ${hasHistory
+          ? `<p>Your measured readiness is currently <strong>${overall}%</strong> across everything you've been tracked on - based on real attempts, not a guess.</p>`
+          : `<p>You've set up a roadmap but haven't logged a practice attempt yet - readiness starts showing up once you do.</p>`}
+        ${due.length ? `
+          <p class="muted small" style="margin-bottom:0;">Due for review right now:</p>
+          <div class="due-chip-row">
+            ${due.map((e) => `<span class="due-chip"><a href="index.html?category=${encodeURIComponent(e.category)}">${escapeHtml(e.category)}</a></span>`).join('')}
+          </div>
+        ` : `<p class="muted small" style="margin-bottom:0;">Nothing is overdue for review right now - great time to push into something new from your Roadmap.</p>`}
+        <div class="actions">
+          <a href="roadmap.html"><button class="primary">Continue today's plan</button></a>
+          <a href="dashboard.html"><button class="ghost">View full dashboard</button></a>
+        </div>
+      </div>
+    `;
+  } catch (e) {
+    // Not signed in yet, or profile/dashboard not reachable - just show the default first-time view.
+  }
+}
+
+document.getElementById('tinyQuestionBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('tinyQuestionBtn');
+  const status = document.getElementById('tinyStatus');
+  btn.disabled = true;
+  btn.textContent = 'Finding one...';
+  try {
+    const result = await api('/interview/start', {
+      method: 'POST',
+      body: JSON.stringify({ category: 'Mixed', difficulty: 'Beginner' }),
+    });
+    sessionStorage.setItem('activeSessionId', result.sessionId);
+    sessionStorage.setItem('firstQuestion', JSON.stringify(result.question));
+    window.location.href = 'interview.html';
+  } catch (e) {
+    status.textContent = 'Could not start: ' + e.message;
+    btn.disabled = false;
+    btn.textContent = 'Answer one easy question (10 min)';
+  }
+});
+
+loadWelcomeBack();
+</script>
+</body>
+</html>
