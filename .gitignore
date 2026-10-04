@@ -25,3 +25,6 @@ logs/
 
 # Study material (large PDFs / spreadsheets)
 resources/
+
+# Personal documents must never be committed or deployed
+/*.pdf

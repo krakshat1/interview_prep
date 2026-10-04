@@ -1,0 +1,18 @@
+# One-click deploy on Render: New + > Blueprint > pick this repo.
+services:
+  - type: web
+    name: interview-prep
+    runtime: docker
+    plan: starter            # persistent disks need a paid instance
+    healthCheckPath: /api/health
+    disk:
+      name: interview-prep-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: AI_PROVIDER
+        value: anthropic
+      - key: AI_MODEL_ANTHROPIC
+        value: claude-sonnet-5-5
+      - key: AI_API_KEY_ANTHROPIC
+        sync: false          # paste your key in the Render dashboard

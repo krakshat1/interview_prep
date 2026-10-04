@@ -1,0 +1,358 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Study Mode</title>
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+</head>
+<body>
+<div class="app-shell">
+  <nav class="topnav" id="topnav"></nav>
+  <div id="app"></div>
+</div>
+
+<script src="shared.js"></script>
+<script src="voice.js"></script>
+<script>
+renderNav('study.html');
+
+const app = document.getElementById('app');
+
+let question = null;      // { id, text, category, difficulty }
+let conversation = [];    // [{ role: 'tutor' | 'student', text, fillerStats?, coaching? }]
+let askedIds = [];        // question ids already covered this session, to avoid repeats
+let recognizer = null;
+let isRecording = false;
+let awaitingReply = false;
+
+// ---------- Screen 1: pick a topic ----------
+
+function renderPicker() {
+  app.innerHTML = `
+    <h1>Study Mode</h1>
+    <p class="subtitle">Learn the concepts from the question bank at your own pace. Ask the tutor to explain anything, try answering out loud, and get gentle feedback on both the idea and the English you used to say it.</p>
+
+    <div class="card">
+      <div class="row">
+        <div class="field">
+          <label for="category">Category</label>
+          <select id="category"><option value="Mixed">Mixed (any category)</option></select>
+        </div>
+        <div class="field">
+          <label for="difficulty">Difficulty</label>
+          <select id="difficulty">
+            <option value="Beginner" selected>Beginner</option>
+            <option value="Intermediate">Intermediate</option>
+            <option value="Advanced">Advanced</option>
+            <option value="Expert">Expert</option>
+          </select>
+        </div>
+      </div>
+      <div class="actions">
+        <button class="primary" id="startBtn">Start Studying</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3>How it works</h3>
+      <ul class="clean muted">
+        <li>The tutor picks a question from the bank and asks it out loud - just like a real interviewer would.</li>
+        <li>Not sure where to start? Say or type "explain this to me" - the tutor builds it up step by step: intuition first, then a concrete example, then the formal definition, then how it's used in practice, before ever quizzing you.</li>
+        <li>Try answering in your own words (by voice or text) whenever you're ready - there's no score, no pressure.</li>
+        <li>You get two kinds of feedback: whether the idea is right, and how to say it more fluently in English.</li>
+        <li>Genuine attempts still count toward your readiness stats on the Dashboard, just like mock interviews.</li>
+      </ul>
+    </div>
+  `;
+
+  api('/questions/meta').then((meta) => {
+    const sel = document.getElementById('category');
+    for (const c of meta.categories) {
+      const opt = document.createElement('option');
+      opt.value = c; opt.textContent = c;
+      sel.appendChild(opt);
+    }
+    const preCategory = qparam('category');
+    if (preCategory && meta.categories.includes(preCategory)) sel.value = preCategory;
+  }).catch(() => {});
+
+  document.getElementById('startBtn').addEventListener('click', async () => {
+    const category = document.getElementById('category').value;
+    const difficulty = document.getElementById('difficulty').value;
+    const btn = document.getElementById('startBtn');
+    btn.disabled = true;
+    btn.textContent = 'Starting...';
+    try {
+      await loadNextQuestion({ category, difficulty });
+      renderChatScreen();
+    } catch (e) {
+      alert('Could not start Study Mode: ' + e.message);
+      btn.disabled = false;
+      btn.textContent = 'Start Studying';
+    }
+  });
+}
+
+// ---------- Screen 2: chat with the tutor ----------
+
+async function loadNextQuestion(opts = {}) {
+  const category = opts.category ?? question?.category ?? 'Mixed';
+  const difficulty = opts.difficulty ?? question?.difficulty ?? 'Beginner';
+  const result = await api('/study/next', {
+    method: 'POST',
+    body: JSON.stringify({ category, difficulty, excludeIds: askedIds }),
+  });
+  question = result.question;
+  askedIds.push(question.id);
+  conversation = [];
+  const opener = `Let's look at this one: "${question.text}" Take your best shot at explaining it in your own words, or just say "explain it to me" if you'd like me to walk you through it first.`;
+  conversation.push({ role: 'tutor', text: opener });
+}
+
+function renderChatScreen() {
+  const supported = speechRecognitionSupported();
+  app.innerHTML = `
+    <div class="row" style="align-items:center; margin-bottom: 4px;">
+      <div>
+        <span class="badge">${escapeHtml(question.category)}</span>
+        <span class="badge">${escapeHtml(question.difficulty)}</span>
+      </div>
+      <div style="text-align:right; flex: 0 0 auto;">
+        <button class="ghost small" id="changeTopicBtn">Change Topic</button>
+      </div>
+    </div>
+
+    <div class="card" id="chatCard">
+      <div class="stage-tracker" id="stageTracker" style="display:none;"></div>
+      <div class="chat-log" id="chatLog"></div>
+
+      <div class="study-composer">
+        ${supported ? `
+          <div class="field">
+            <label>Your turn (live transcript)</label>
+            <div class="transcript-box" id="transcriptBox"><span class="muted">Click "Speak" and talk it through, or type below instead.</span></div>
+          </div>
+        ` : ''}
+        <div class="field" style="margin-bottom: 10px;">
+          <textarea id="manualInput" rows="2" placeholder="Type your answer or question here..."></textarea>
+        </div>
+        <div class="actions">
+          ${supported ? '<button class="rec" id="recBtn">🎤 Speak</button>' : ''}
+          <button class="primary" id="sendBtn">Send</button>
+          <button class="ghost" id="explainBtn">🎓 Explain this to me</button>
+          <span style="flex:1 1 auto;"></span>
+          <button class="ghost" id="nextBtn">Next question →</button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('changeTopicBtn').addEventListener('click', () => {
+    stopSpeaking();
+    renderPicker();
+  });
+  document.getElementById('nextBtn').addEventListener('click', async () => {
+    stopSpeaking();
+    const btn = document.getElementById('nextBtn');
+    btn.disabled = true;
+    try {
+      await loadNextQuestion({});
+      renderChatScreen();
+    } catch (e) {
+      alert('Could not load the next question: ' + e.message);
+      btn.disabled = false;
+    }
+  });
+  document.getElementById('explainBtn').addEventListener('click', () => {
+    if (awaitingReply) return;
+    sendMessage('Can you explain this to me first, step by step?');
+  });
+  document.getElementById('sendBtn').addEventListener('click', () => {
+    const text = document.getElementById('manualInput').value.trim();
+    if (!text || awaitingReply) return;
+    document.getElementById('manualInput').value = '';
+    sendMessage(text);
+  });
+  if (supported) wireRecording();
+
+  renderConversation();
+  speak(conversation[0].text);
+}
+
+function wireRecording() {
+  const recBtn = document.getElementById('recBtn');
+  const box = document.getElementById('transcriptBox');
+  let finalSoFar = '';
+
+  recognizer = createRecognizer({
+    onInterim(interim) {
+      box.innerHTML = escapeHtml(finalSoFar) +
+        (interim ? `<span class="muted"> ${escapeHtml(interim)}</span>` : '');
+    },
+    onFinalChunk(full) { finalSoFar = full; },
+    onError(err) { if (err !== 'no-speech') console.error('Speech recognition error:', err); },
+    onEnd(full) {
+      finalSoFar = full;
+      isRecording = false;
+      recBtn.textContent = '🎤 Speak';
+      recBtn.classList.remove('recording');
+      if (finalSoFar) document.getElementById('manualInput').value = finalSoFar;
+    },
+  });
+
+  recBtn.addEventListener('click', () => {
+    if (awaitingReply) return;
+    if (!isRecording) {
+      finalSoFar = '';
+      box.innerHTML = '<span class="muted">Listening...</span>';
+      recognizer.start();
+      isRecording = true;
+      recBtn.textContent = '⏹ Stop';
+      recBtn.classList.add('recording');
+    } else {
+      recognizer.stop();
+    }
+  });
+}
+
+const STAGE_META = [
+  { key: 'intuition', label: 'Intuition' },
+  { key: 'example', label: 'Example' },
+  { key: 'formalism', label: 'Definition' },
+  { key: 'connection', label: 'Big picture' },
+  { key: 'check', label: 'Check' },
+  { key: 'interview', label: 'Interview' },
+];
+
+function currentTeachingStage() {
+  for (let i = conversation.length - 1; i >= 0; i--) {
+    const t = conversation[i];
+    if (t.role === 'tutor' && t.coaching && t.coaching.teachingStage) return t.coaching.teachingStage;
+  }
+  return null;
+}
+
+function renderStageTracker() {
+  const el = document.getElementById('stageTracker');
+  if (!el) return;
+  const stage = currentTeachingStage();
+  const idx = STAGE_META.findIndex((s) => s.key === stage);
+  if (idx === -1) { el.style.display = 'none'; el.innerHTML = ''; return; }
+  el.style.display = '';
+  el.innerHTML = STAGE_META.map((s, i) => {
+    const cls = i < idx ? 'done' : i === idx ? 'active' : '';
+    return `<div class="stage-step ${cls}"><span class="stage-dot"></span>${escapeHtml(s.label)}</div>` +
+      (i < STAGE_META.length - 1 ? '<div class="stage-line"></div>' : '');
+  }).join('');
+}
+
+function conceptBadgeClass(status) {
+  if (status === 'nailed_it') return 'good';
+  if (status === 'close') return 'warn';
+  if (status === 'needs_work') return 'bad';
+  return '';
+}
+const conceptLabel = {
+  nailed_it: 'Nailed it', close: 'Close', needs_work: 'Needs work', not_attempted: 'Not attempted yet',
+};
+
+function renderCoaching(coaching) {
+  if (!coaching) return '';
+  const c = coaching.conceptFeedback;
+  const e = coaching.englishFeedback;
+  const hasConcept = c && c.status !== 'not_attempted';
+  const hasEnglish = e && (e.strengths?.length || e.improvements?.length || e.modelPhrasing);
+  if (!hasConcept && !hasEnglish) return '';
+
+  return `
+    <div class="coaching-card">
+      ${hasConcept ? `
+        <div class="coaching-section">
+          <div class="label">Concept <span class="badge ${conceptBadgeClass(c.status)}" style="margin-left:6px;">${conceptLabel[c.status] || c.status}</span></div>
+          ${c.whatWasRight?.length ? `<ul class="clean">${c.whatWasRight.map((s) => `<li>✓ ${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
+          ${c.whatsMissing?.length ? `<ul class="clean muted">${c.whatsMissing.map((s) => `<li>→ ${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
+        </div>
+      ` : ''}
+      ${hasEnglish ? `
+        <div class="coaching-section">
+          <div class="label">Your English</div>
+          ${e.strengths?.length ? `<ul class="clean">${e.strengths.map((s) => `<li>✓ ${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
+          ${e.improvements?.length ? `<ul class="clean muted">${e.improvements.map((s) => `<li>→ ${escapeHtml(s)}</li>`).join('')}</ul>` : ''}
+          ${e.modelPhrasing ? `<div class="model-phrase" style="margin-top:6px;">"${escapeHtml(e.modelPhrasing)}"</div>` : ''}
+        </div>
+      ` : ''}
+      ${coaching.encouragement ? `<div class="encouragement">${escapeHtml(coaching.encouragement)}</div>` : ''}
+    </div>
+  `;
+}
+
+function renderConversation() {
+  const log = document.getElementById('chatLog');
+  if (!log) return;
+  log.innerHTML = conversation.map((turn) => {
+    if (turn.role === 'tutor') {
+      return `
+        <div class="chat-msg tutor">
+          <div class="chat-label">Tutor</div>
+          <div class="chat-bubble">${escapeHtml(turn.text)}</div>
+          ${renderCoaching(turn.coaching)}
+        </div>`;
+    }
+    const fillerChip = turn.fillerStats?.totalFillerWords
+      ? `<span class="badge warn small" style="margin-top:4px; display:inline-block;">${turn.fillerStats.totalFillerWords} filler word${turn.fillerStats.totalFillerWords === 1 ? '' : 's'}</span>`
+      : '';
+    return `
+      <div class="chat-msg student">
+        <div class="chat-label">You</div>
+        <div class="chat-bubble">${escapeHtml(turn.text)}</div>
+        ${fillerChip}
+      </div>`;
+  }).join('') + (awaitingReply ? `<div class="chat-msg tutor"><div class="chat-bubble muted"><span class="spinner"></span> Tutor is thinking...</div></div>` : '');
+  log.scrollTop = log.scrollHeight;
+  renderStageTracker();
+}
+
+async function sendMessage(text) {
+  if (awaitingReply) return;
+  stopSpeaking();
+  awaitingReply = true;
+  const historyBeforeThisTurn = conversation.map((t) => ({ role: t.role, text: t.text }));
+  conversation.push({ role: 'student', text });
+  renderConversation();
+
+  const sendBtn = document.getElementById('sendBtn');
+  const explainBtn = document.getElementById('explainBtn');
+  if (sendBtn) sendBtn.disabled = true;
+  if (explainBtn) explainBtn.disabled = true;
+
+  try {
+    const result = await api('/study/message', {
+      method: 'POST',
+      body: JSON.stringify({
+        questionId: question.id,
+        conversation: historyBeforeThisTurn,
+        message: text,
+        currentStage: currentTeachingStage(),
+      }),
+    });
+    conversation[conversation.length - 1].fillerStats = result.fillerStats;
+    conversation.push({ role: 'tutor', text: result.tutorTurn.tutorReply, coaching: result.tutorTurn });
+    awaitingReply = false;
+    renderConversation();
+    speak(result.tutorTurn.tutorReply);
+  } catch (e) {
+    awaitingReply = false;
+    conversation.push({ role: 'tutor', text: `Sorry, something went wrong: ${e.message}. Want to try that again?` });
+    renderConversation();
+  } finally {
+    if (sendBtn) sendBtn.disabled = false;
+    if (explainBtn) explainBtn.disabled = false;
+  }
+}
+
+renderPicker();
+</script>
+</body>
+</html>

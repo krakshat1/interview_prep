@@ -8,9 +8,23 @@
 <script src="theme.js"></script>
 </head>
 <body>
-<div class="app-shell" style="max-width:400px; padding-top:60px;">
-  <h1 style="text-align:center;">🎙️ Interview Prep</h1>
-  <p class="subtitle" style="text-align:center;">Log in to your dashboard</p>
+<div class="auth-split">
+  <aside class="auth-pitch">
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span>Interview Prep</a>
+    <div>
+      <h2>Pick up where you <span class="gradient-text">left off.</span></h2>
+      <p class="muted" style="font-size:16px;max-width:42ch;">Your plan, your mastery and your next question are waiting.</p>
+      <ul>
+        <li>Voice mock interviews scored on accuracy, clarity and confidence</li>
+        <li>Python &amp; SQL graded by actually running your code</li>
+        <li>A daily plan and a readiness score measured from real practice</li>
+      </ul>
+    </div>
+    <div class="quote">Motivation shows up after you start. Do one question today.</div>
+  </aside>
+  <main class="auth-form-side"><div class="auth-card">
+  <h1>Welcome back</h1>
+  <p class="subtitle" style="font-size:14.5px;margin-bottom:22px;">Log in to continue practicing</p>
   <div class="card">
     <div id="errorArea"></div>
     <div class="field">
@@ -22,10 +36,11 @@
       <input type="password" id="password" autocomplete="current-password" />
     </div>
     <div class="actions">
-      <button class="primary" id="loginBtn" style="flex:1;">Log In</button>
+      <button class="primary lg full" id="loginBtn">Log In</button>
     </div>
   </div>
   <p class="muted small" style="text-align:center;">No account yet? <a href="signup.html">Sign up</a></p>
+  </div></main>
 </div>
 <script src="shared.js"></script>
 <script>

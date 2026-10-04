@@ -1,6 +1,7 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const store = require('../services/store');
+const config = require('../config');
 const { SESSION_COOKIE } = require('../middleware/auth');
 
 const router = express.Router();
@@ -12,6 +13,7 @@ function setSessionCookie(res, token) {
   res.cookie(SESSION_COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
+    secure: config.isProd,
     maxAge: SESSION_TTL_MS,
   });
 }

@@ -1,0 +1,253 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Interview Prep - AI mock interviews for ML &amp; AI roles</title>
+<meta name="description" content="Practice out loud with an AI interviewer, run real code and SQL, and track measured job-readiness. Built for aspiring Data Scientists, ML and AI Engineers." />
+<meta property="og:title" content="Interview Prep - AI mock interviews for ML & AI roles" />
+<meta property="og:description" content="Voice mock interviews, graded coding practice, system design and a personalised roadmap - with readiness you can actually measure." />
+<link rel="stylesheet" href="style.css" />
+<script src="theme.js"></script>
+<style>
+  html { scroll-behavior: smooth; }
+  .wrap { max-width: 1160px; margin: 0 auto; padding: 0 24px; }
+  .lp-nav { position: sticky; top: 0; z-index: 30; backdrop-filter: blur(16px) saturate(1.4); -webkit-backdrop-filter: blur(16px) saturate(1.4); background: var(--sidebar); border-bottom: 1px solid var(--border); }
+  .lp-nav .wrap { display: flex; align-items: center; gap: 28px; height: 66px; }
+  .lp-nav .brand { display: flex; align-items: center; gap: 10px; font-weight: 800; font-size: 18px; letter-spacing: -0.02em; color: var(--text); }
+  .lp-nav .brand:hover { text-decoration: none; }
+  .lp-nav .links { display: flex; gap: 24px; margin-left: 12px; }
+  .lp-nav .links a { color: var(--text-dim); font-size: 14px; font-weight: 500; }
+  .lp-nav .links a:hover { color: var(--text); text-decoration: none; }
+  .lp-nav .spacer { flex: 1; }
+  .lp-nav .login { color: var(--text-dim); font-weight: 600; font-size: 14px; }
+
+  .hero { padding: 84px 0 40px; text-align: center; position: relative; }
+  .eyebrow { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border: 1px solid var(--border); border-radius: 999px; background: var(--bg-elev); font-size: 13px; font-weight: 600; color: var(--text-dim); margin-bottom: 26px; }
+  .eyebrow b { background: var(--grad); color: #fff; border-radius: 999px; padding: 2px 9px; font-size: 11px; letter-spacing: .05em; text-transform: uppercase; }
+  .hero h1 { font-size: clamp(38px, 6.4vw, 72px); line-height: 1.04; letter-spacing: -0.045em; font-weight: 800; max-width: 17ch; margin: 0 auto 22px; }
+  .hero p.lead { font-size: clamp(16px, 2vw, 20px); color: var(--text-dim); max-width: 60ch; margin: 0 auto 34px; }
+  .cta-row { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+  .cta-row a:hover { text-decoration: none; }
+  .fine { color: var(--text-dim); font-size: 13px; margin-top: 16px; }
+
+  /* Product mock */
+  .mock { margin: 64px auto 0; max-width: 980px; border: 1px solid var(--border); border-radius: 22px; background: var(--bg-elev); box-shadow: 0 40px 120px -40px rgba(124,108,255,.55), var(--shadow); overflow: hidden; text-align: left; }
+  .mock-bar { display: flex; align-items: center; gap: 7px; padding: 13px 16px; border-bottom: 1px solid var(--border); background: var(--bg-elev-2); }
+  .mock-bar i { width: 11px; height: 11px; border-radius: 50%; background: var(--border); display: block; }
+  .mock-bar span { margin-left: 10px; font-size: 12px; color: var(--text-dim); }
+  .mock-body { display: grid; grid-template-columns: 1.25fr 1fr; }
+  .mock-left { padding: 28px; border-right: 1px solid var(--border); }
+  .mock-right { padding: 28px; display: grid; gap: 18px; align-content: start; }
+  .q-tag { display: inline-block; font-size: 11px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; color: var(--accent); margin-bottom: 8px; }
+  .q-text { font-size: 20px; font-weight: 700; letter-spacing: -0.02em; line-height: 1.3; margin-bottom: 20px; }
+  .wave { display: flex; align-items: center; gap: 3px; height: 46px; margin-bottom: 14px; }
+  .wave i { width: 4px; border-radius: 4px; background: var(--grad); animation: wv 1.1s ease-in-out infinite; }
+  @keyframes wv { 0%,100% { height: 8px; } 50% { height: 40px; } }
+  .transcribed { font-size: 14px; color: var(--text-dim); background: var(--bg-elev-2); border: 1px dashed var(--border); border-radius: 12px; padding: 13px 15px; line-height: 1.55; }
+  .transcribed mark { background: rgba(251,191,36,.2); color: var(--warn); border-radius: 4px; padding: 0 3px; }
+  .ring-row { display: flex; gap: 14px; }
+  .ring { flex: 1; text-align: center; background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 14px; padding: 14px 6px; }
+  .ring svg { width: 62px; height: 62px; transform: rotate(-90deg); }
+  .ring circle { fill: none; stroke-width: 7; stroke-linecap: round; }
+  .ring .t { stroke: var(--border); }
+  .ring .p { stroke: url(#g); stroke-dasharray: 164; animation: fill 1.6s .4s ease both; }
+  @keyframes fill { from { stroke-dashoffset: 164; } }
+  .ring .n { font-size: 20px; font-weight: 800; margin-top: -46px; height: 46px; line-height: 46px; letter-spacing: -0.03em; }
+  .ring .l { font-size: 11.5px; color: var(--text-dim); margin-top: 10px; font-weight: 600; }
+  .fb { font-size: 13px; color: var(--text-dim); background: var(--bg-elev-2); border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; }
+  .fb b { color: var(--good); }
+
+  .proof { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin: 72px 0 0; }
+  .proof > div { text-align: center; padding: 22px 10px; border: 1px solid var(--border); border-radius: 16px; background: var(--bg-elev); }
+  .proof .n { font-size: 34px; font-weight: 800; letter-spacing: -0.04em; }
+  .proof .l { color: var(--text-dim); font-size: 13px; }
+
+  section.s { padding: 96px 0 0; }
+  .s-head { text-align: center; margin-bottom: 48px; }
+  .s-head .eyebrow { margin-bottom: 18px; padding: 5px 14px; }
+  .s-head h2 { font-size: clamp(28px, 4vw, 44px); line-height: 1.1; letter-spacing: -0.035em; font-weight: 800; margin: 0 auto 14px; max-width: 20ch; }
+  .s-head p { color: var(--text-dim); font-size: 17px; max-width: 58ch; margin: 0 auto; }
+
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .feat { background: var(--bg-elev); border: 1px solid var(--border); border-radius: 18px; padding: 26px; box-shadow: var(--shadow); transition: transform .2s, border-color .2s; }
+  .feat:hover { transform: translateY(-3px); border-color: var(--accent); }
+  .feat .ic { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; background: var(--grad); color: #fff; margin-bottom: 18px; box-shadow: var(--glow); }
+  .feat .ic svg { width: 22px; height: 22px; }
+  .feat h3 { text-transform: none; letter-spacing: -0.01em; font-size: 17px; color: var(--text); margin-bottom: 8px; font-weight: 700; }
+  .feat p { margin: 0; color: var(--text-dim); font-size: 14.5px; }
+
+  .steps { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; counter-reset: s; }
+  .step { position: relative; padding: 28px; border: 1px solid var(--border); border-radius: 18px; background: var(--bg-elev); }
+  .step::before { counter-increment: s; content: counter(s); display: grid; place-items: center; width: 34px; height: 34px; border-radius: 50%; background: var(--grad); color: #fff; font-weight: 800; margin-bottom: 16px; }
+  .step h3 { text-transform: none; letter-spacing: -0.01em; font-size: 17px; color: var(--text); font-weight: 700; }
+  .step p { margin: 0; color: var(--text-dim); font-size: 14.5px; }
+
+  .plans { display: grid; grid-template-columns: repeat(3, 1fr); gap: 18px; align-items: stretch; }
+  .plan { position: relative; display: flex; flex-direction: column; padding: 30px; border: 1px solid var(--border); border-radius: 22px; background: var(--bg-elev); box-shadow: var(--shadow); }
+  .plan.pop { border-color: transparent; background: linear-gradient(var(--bg), var(--bg)) padding-box, var(--grad) border-box; border: 1.5px solid transparent; box-shadow: 0 30px 80px -30px rgba(124,108,255,.6); }
+  .plan .tag { position: absolute; top: -13px; left: 50%; transform: translateX(-50%); background: var(--grad); color: #fff; font-size: 11px; font-weight: 800; letter-spacing: .07em; text-transform: uppercase; padding: 4px 14px; border-radius: 999px; }
+  .plan h3 { text-transform: none; letter-spacing: -0.01em; font-size: 18px; color: var(--text); font-weight: 700; margin-bottom: 4px; }
+  .plan .for { color: var(--text-dim); font-size: 13.5px; min-height: 40px; }
+  .plan .price { font-size: 46px; font-weight: 800; letter-spacing: -0.045em; margin: 18px 0 2px; }
+  .plan .price small { font-size: 15px; color: var(--text-dim); font-weight: 500; letter-spacing: 0; }
+  .plan ul { list-style: none; padding: 0; margin: 22px 0 28px; display: grid; gap: 11px; flex: 1; }
+  .plan li { display: flex; gap: 10px; font-size: 14.5px; }
+  .plan li::before { content: "✓"; color: var(--good); font-weight: 800; }
+  .plan a { display: block; text-align: center; }
+  .plan a button { width: 100%; }
+  .plan a:hover { text-decoration: none; }
+
+  .faq { max-width: 760px; margin: 0 auto; }
+  .faq details { border: 1px solid var(--border); border-radius: 14px; background: var(--bg-elev); padding: 18px 22px; margin-bottom: 10px; }
+  .faq summary { cursor: pointer; font-weight: 600; font-size: 15.5px; list-style: none; display: flex; justify-content: space-between; gap: 16px; }
+  .faq summary::after { content: "+"; font-size: 20px; line-height: 1; color: var(--accent); }
+  .faq details[open] summary::after { content: "−"; }
+  .faq details p { color: var(--text-dim); margin: 12px 0 0; }
+
+  .final { margin: 110px 0 0; padding: 64px 24px; text-align: center; border-radius: 28px; border: 1px solid var(--border); background: radial-gradient(40rem 20rem at 50% 0%, var(--aurora-a), transparent 70%), var(--bg-elev); }
+  .final h2 { font-size: clamp(28px, 4vw, 46px); letter-spacing: -0.04em; font-weight: 800; margin: 0 auto 14px; max-width: 18ch; line-height: 1.1; }
+  .final p { color: var(--text-dim); margin: 0 auto 28px; max-width: 50ch; font-size: 17px; }
+  footer.lp { padding: 48px 0 56px; margin-top: 56px; border-top: 1px solid var(--border); color: var(--text-dim); font-size: 13.5px; display: flex; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
+
+  @media (max-width: 900px) {
+    .mock-body { grid-template-columns: 1fr; }
+    .mock-left { border-right: 0; border-bottom: 1px solid var(--border); }
+    .grid3, .steps, .plans { grid-template-columns: 1fr; }
+    .proof { grid-template-columns: repeat(2, 1fr); }
+    .lp-nav .links { display: none; }
+    .hero { padding-top: 52px; }
+  }
+</style>
+</head>
+<body>
+<header class="lp-nav">
+  <div class="wrap">
+    <a class="brand" href="/"><span class="brand-mark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></span>Interview Prep</a>
+    <nav class="links"><a href="#features">Features</a><a href="#how">How it works</a><a href="#pricing">Pricing</a><a href="#faq">FAQ</a></nav>
+    <span class="spacer"></span>
+    <a class="login" href="login.html">Log in</a>
+    <a href="signup.html"><button class="primary">Start free</button></a>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero">
+    <div class="eyebrow"><b>New</b> Study Mode - an AI tutor that coaches how you speak, not just what you know</div>
+    <h1>Walk into your ML interview <span class="gradient-text">already having done it.</span></h1>
+    <p class="lead">Practice out loud with an AI interviewer, write code that's graded by actually running it, and watch a readiness score that's measured from real attempts - not a hunch.</p>
+    <div class="cta-row">
+      <a href="signup.html"><button class="primary lg">Start practicing free</button></a>
+      <a href="#how"><button class="lg">See how it works</button></a>
+    </div>
+    <p class="fine">No card required &middot; Works best in Chrome or Edge for voice</p>
+
+    <div class="mock" aria-hidden="true">
+      <div class="mock-bar"><i></i><i></i><i></i><span>Mock interview &middot; Machine Learning &middot; Intermediate</span></div>
+      <div class="mock-body">
+        <div class="mock-left">
+          <span class="q-tag">Question 3 of 8</span>
+          <div class="q-text">Your model has 99% accuracy but the business says it's useless. What's going on and how would you fix it?</div>
+          <div class="wave"><i style="animation-delay:-.1s"></i><i style="animation-delay:-.4s"></i><i style="animation-delay:-.7s"></i><i style="animation-delay:-.2s"></i><i style="animation-delay:-.9s"></i><i style="animation-delay:-.5s"></i><i style="animation-delay:-.3s"></i><i style="animation-delay:-.8s"></i><i style="animation-delay:-.6s"></i><i style="animation-delay:-.15s"></i><i style="animation-delay:-.55s"></i><i style="animation-delay:-.35s"></i><i style="animation-delay:-.75s"></i><i style="animation-delay:-.25s"></i></div>
+          <div class="transcribed">"So, um, it's probably <mark>class imbalance</mark> - the model just predicts the majority class. I'd look at precision and recall, maybe the PR curve, and try resampling or <mark>class weights</mark>..."</div>
+        </div>
+        <div class="mock-right">
+          <svg width="0" height="0"><defs><linearGradient id="g" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#8b7bff"/><stop offset="1" stop-color="#38bdf8"/></linearGradient></defs></svg>
+          <div class="ring-row">
+            <div class="ring"><svg viewBox="0 0 60 60"><circle class="t" cx="30" cy="30" r="26"/><circle class="p" cx="30" cy="30" r="26" style="stroke-dashoffset:33"/></svg><div class="n">8</div><div class="l">Accuracy</div></div>
+            <div class="ring"><svg viewBox="0 0 60 60"><circle class="t" cx="30" cy="30" r="26"/><circle class="p" cx="30" cy="30" r="26" style="stroke-dashoffset:49"/></svg><div class="n">7</div><div class="l">Clarity</div></div>
+            <div class="ring"><svg viewBox="0 0 60 60"><circle class="t" cx="30" cy="30" r="26"/><circle class="p" cx="30" cy="30" r="26" style="stroke-dashoffset:66"/></svg><div class="n">6</div><div class="l">Confidence</div></div>
+          </div>
+          <div class="fb"><b>Strong:</b> you named class imbalance and the right metrics. <b style="color:var(--warn)">Tighten:</b> 2 filler words ("um") - lead with the diagnosis, then the fix.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="proof">
+      <div><div class="n gradient-text">555</div><div class="l">interview questions</div></div>
+      <div><div class="n gradient-text">48</div><div class="l">graded Python &amp; SQL problems</div></div>
+      <div><div class="n gradient-text">11</div><div class="l">system design cases</div></div>
+      <div><div class="n gradient-text">15</div><div class="l">topic areas, ML to LLMOps</div></div>
+    </div>
+  </section>
+
+  <section class="s" id="features">
+    <div class="s-head">
+      <div class="eyebrow">Everything in one place</div>
+      <h2>Every round of the loop, <span class="gradient-text">practiced for real</span></h2>
+      <p>Most candidates fail a round they never rehearsed. Each part of the product maps to one real interview round.</p>
+    </div>
+    <div class="grid3">
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0014 0M12 18v3"/></svg></div><h3>Voice mock interviews</h3><p>Answer out loud. Get scored on accuracy, communication and confidence, with filler-word counts and adaptive follow-ups.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M8 8l-5 4 5 4M16 8l5 4-5 4M14 5l-4 14"/></svg></div><h3>Code &amp; SQL that actually runs</h3><p>Your solution is executed against hidden test cases. "I think it works" becomes "4 of 5 tests pass - here's the one that fails."</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 5a2 2 0 012-2h12a2 2 0 012 2v10a2 2 0 01-2 2H9l-5 4V5z"/></svg></div><h3>Study Mode tutor</h3><p>A patient AI coach walks you through concepts, then coaches your phrasing - with model answers you can steal.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M9 4L3 6v14l6-2 6 2 6-2V4l-6 2-6-2zM9 4v14M15 6v14"/></svg></div><h3>A plan, not a pile</h3><p>Tell it your target role, date and hours per day. Get a 3- or 6-month roadmap that tells you exactly what to do today.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg></div><h3>Measured readiness</h3><p>Spaced-repetition mastery per topic. Your dashboard shows what's weak, what's due for review, and your real trend.</p></div>
+      <div class="feat"><div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M21 21l-4.5-4.5M8.5 11l2 2 3.5-4"/></svg></div><h3>Resume defense &amp; job match</h3><p>Get grilled on the claims in your own resume, and see exactly which skills a job description wants that you're missing.</p></div>
+    </div>
+  </section>
+
+  <section class="s" id="how">
+    <div class="s-head">
+      <div class="eyebrow">How it works</div>
+      <h2>From "where do I start?" to <span class="gradient-text">offer-ready</span></h2>
+    </div>
+    <div class="steps">
+      <div class="step"><h3>Tell it your target</h3><p>Pick Data Scientist, ML Engineer or AI Engineer, set your date and daily time. Two minutes.</p></div>
+      <div class="step"><h3>Practice what's due</h3><p>Voice interviews, code, SQL and design cases - picked for you based on what you're weakest at.</p></div>
+      <div class="step"><h3>Watch the number move</h3><p>Every attempt updates your mastery. Weekly reports call out repeated mistakes before an interviewer does.</p></div>
+    </div>
+  </section>
+
+  <section class="s" id="pricing">
+    <div class="s-head">
+      <div class="eyebrow">Pricing</div>
+      <h2>Cheaper than one <span class="gradient-text">missed offer</span></h2>
+      <p>Start free. Upgrade when you're serious about a date.</p>
+    </div>
+    <div class="plans">
+      <div class="plan">
+        <h3>Starter</h3><div class="for">Try the format and find your weak spots.</div>
+        <div class="price">$0<small> / forever</small></div>
+        <ul><li>5 mock interviews per month</li><li>Code &amp; SQL practice</li><li>Research papers library</li><li>Basic dashboard</li></ul>
+        <a href="signup.html"><button class="lg">Get started</button></a>
+      </div>
+      <div class="plan pop">
+        <span class="tag">Most popular</span>
+        <h3>Pro</h3><div class="for">Everything you need to land the role.</div>
+        <div class="price">$19<small> / month</small></div>
+        <ul><li>Unlimited mock interviews</li><li>Study Mode AI tutor</li><li>Personalised 3- or 6-month roadmap</li><li>Spaced-repetition mastery &amp; weekly reports</li><li>System design practice</li><li>Resume defense &amp; job match</li></ul>
+        <a href="signup.html"><button class="primary lg">Start Pro</button></a>
+      </div>
+      <div class="plan">
+        <h3>Career</h3><div class="for">For an active job hunt, end to end.</div>
+        <div class="price">$39<small> / month</small></div>
+        <ul><li>Everything in Pro</li><li>AI resume builder</li><li>Application tracker</li><li>Priority AI responses</li><li>Early access to new tracks</li></ul>
+        <a href="signup.html"><button class="lg">Start Career</button></a>
+      </div>
+    </div>
+  </section>
+
+  <section class="s" id="faq">
+    <div class="s-head"><h2>Questions, <span class="gradient-text">answered</span></h2></div>
+    <div class="faq">
+      <details><summary>Do I need a microphone?</summary><p>Voice is the best way to practice, and it works in Chrome and Edge. In any other browser you can type your answers instead.</p></details>
+      <details><summary>How is the code graded?</summary><p>Your solution is executed against test cases on our servers and you see which pass and fail - it isn't an AI guessing whether it looks right.</p></details>
+      <details><summary>Which roles does it cover?</summary><p>Data Scientist, ML Engineer and AI Engineer tracks, from Python and SQL fundamentals through deep learning, RAG and LLMOps.</p></details>
+      <details><summary>Is my data private?</summary><p>Your progress, resume and sessions are scoped to your account. Only the text needed for evaluation (your answers, code, resume text) is sent to the AI provider.</p></details>
+      <details><summary>Can I cancel anytime?</summary><p>Yes. No contracts - cancel from your account whenever you like.</p></details>
+    </div>
+  </section>
+
+  <section class="final">
+    <h2>Your next interview is <span class="gradient-text">just a rehearsal away.</span></h2>
+    <p>Do one question today. That's the whole plan for right now.</p>
+    <a href="signup.html"><button class="primary lg">Create your free account</button></a>
+  </section>
+
+  <footer class="lp"><span>&copy; <span id="yr"></span> Interview Prep</span><span><a href="login.html">Log in</a> &middot; <a href="signup.html">Sign up</a></span></footer>
+</main>
+<script>document.getElementById('yr').textContent = new Date().getFullYear();
+if (window.mountThemeToggle) window.mountThemeToggle(document.querySelector('.lp-nav .wrap'), false);</script>
+</body>
+</html>

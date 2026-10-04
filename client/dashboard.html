@@ -8,19 +8,19 @@
 <script src="theme.js"></script>
 <style>
   .meter-row { display: grid; grid-template-columns: 170px 1fr 42px; align-items: center; gap: 10px; margin-bottom: 10px; }
-  .meter-track { background: var(--bg-elev-2); border-radius: 999px; height: 10px; overflow: hidden; }
+  .meter-track { background: var(--bg-elev-2); border-radius: 999px; height: 10px; box-shadow: inset 0 1px 2px rgba(0,0,0,.25); overflow: hidden; }
   .meter-fill { height: 100%; border-radius: 999px; }
   .meter-fill.good { background: var(--good); }
   .meter-fill.warn { background: var(--warn); }
   .meter-fill.bad { background: var(--bad); }
-  .hero-score { font-size: 48px; font-weight: 800; line-height: 1; }
+  .hero-score { font-size: 56px; font-weight: 800; line-height: 1; letter-spacing: -0.04em; }
 </style>
 </head>
 <body>
 <div class="app-shell">
   <nav class="topnav" id="topnav"></nav>
 
-  <h1>Dashboard</h1>
+  <h1>Your <span class="gradient-text">readiness</span></h1>
   <p class="subtitle">Your actual measured readiness, computed from real practice data - not a self-report.</p>
 
   <div id="content"><span class="spinner"></span> Loading...</div>

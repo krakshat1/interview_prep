@@ -82,6 +82,7 @@ function getDueForReview(userId) {
 // appear in the headline readiness breakdown.
 const SKILL_AREA_MAP = {
   Python: 'Python',
+  OOP: 'OOP',
   SQL: 'SQL',
   'Data Analysis': 'Data Analysis',
   'Math - Linear Algebra': 'Math & Statistics',

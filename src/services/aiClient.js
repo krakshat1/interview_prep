@@ -618,8 +618,142 @@ Review this resume draft now.`;
   return callAI({ system: RESUME_REVIEW_SYSTEM_PROMPT, prompt: userPrompt, schema: ResumeReviewSchema, jsonSchema: ResumeReviewJsonSchema });
 }
 
+// ---------------------------------------------------------------------
+// Study Mode: a patient tutor chat built on the same question bank as the
+// mock interview, but for *learning* rather than grading. Two jobs per
+// turn, kept separate so neither drowns the other: (1) check/teach the
+// underlying concept, (2) coach how the student said it in English -
+// light-touch, confidence-building feedback, not a red-pen critique.
+// ---------------------------------------------------------------------
+const TEACHING_STAGES = ['intuition', 'example', 'formalism', 'connection', 'check', 'interview'];
+
+const TutorSchema = z.object({
+  tutorReply: z.string(),
+  teachingStage: z.enum(TEACHING_STAGES).nullable(),
+  wasGenuineAttempt: z.boolean(),
+  conceptFeedback: z.object({
+    status: z.enum(['not_attempted', 'nailed_it', 'close', 'needs_work']),
+    whatWasRight: z.array(z.string()),
+    whatsMissing: z.array(z.string()),
+  }),
+  englishFeedback: z.object({
+    strengths: z.array(z.string()),
+    improvements: z.array(z.string()),
+    modelPhrasing: z.string(),
+  }),
+  encouragement: z.string(),
+  readyForNextQuestion: z.boolean(),
+});
+
+const TutorJsonSchema = {
+  type: 'object',
+  properties: {
+    tutorReply: { type: 'string' },
+    teachingStage: { type: 'string', enum: TEACHING_STAGES, nullable: true },
+    wasGenuineAttempt: { type: 'boolean' },
+    conceptFeedback: {
+      type: 'object',
+      properties: {
+        status: { type: 'string', enum: ['not_attempted', 'nailed_it', 'close', 'needs_work'] },
+        whatWasRight: { type: 'array', items: { type: 'string' } },
+        whatsMissing: { type: 'array', items: { type: 'string' } },
+      },
+      required: ['status', 'whatWasRight', 'whatsMissing'],
+    },
+    englishFeedback: {
+      type: 'object',
+      properties: {
+        strengths: { type: 'array', items: { type: 'string' } },
+        improvements: { type: 'array', items: { type: 'string' } },
+        modelPhrasing: { type: 'string' },
+      },
+      required: ['strengths', 'improvements', 'modelPhrasing'],
+    },
+    encouragement: { type: 'string' },
+    readyForNextQuestion: { type: 'boolean' },
+  },
+  required: ['tutorReply', 'teachingStage', 'wasGenuineAttempt', 'conceptFeedback', 'englishFeedback', 'encouragement', 'readyForNextQuestion'],
+};
+
+const TUTOR_SYSTEM_PROMPT = `You are a warm, patient English-speaking interview coach and tutor. You're helping a student - often a non-native English speaker - learn a technical concept AND build the confidence to explain it out loud in English, the way they'd need to in a real interview. This is a LEARNING session, not a graded interview: your tone is encouraging and supportive, never harsh or intimidating, but still honest - don't tell them they're right when they're not, that would hurt them later.
+
+You are a TUTOR FIRST AND AN INTERVIEWER SECOND. A learner should be able to explain why a concept is useful and what problem it solves before they're ever expected to reproduce its formal/technical definition. Never lead with the textbook definition, jargon, or a formula - intuition always comes first.
+
+You will be given:
+- The interview question being studied
+- Reference material for that question (expected answer, key concepts, common mistakes) - the student does not see this directly, only you do
+- The conversation so far between you (tutor) and the student
+- CURRENT_TEACHING_STAGE - where you left off teaching this concept (or "none" if teaching hasn't started)
+- The student's latest message - their attempt at answering, a question for you, or a request for help. It may be transcribed from speech, so tolerate filler words, informal phrasing, and minor transcription errors gracefully.
+
+=== THE TEACHING SEQUENCE ===
+When the student wants to LEARN the concept (they asked you to explain it, said they don't know, or sound stuck/confused), teach it through these six stages, ONE stage per turn - never skip ahead, never dump more than one stage in a single reply:
+
+1. intuition - Start here whenever CURRENT_TEACHING_STAGE is "none" and the student wants to learn. Give ONE everyday analogy or a plain-English framing of the PROBLEM this concept solves. No jargon, no formal terms, no formulas, no numbers yet. End by checking they're with you so far.
+2. example - Once they've engaged with the intuition (said "ok", asked to continue, tried to restate it, asked a follow-up), walk through ONE small, concrete, specific example. If the concept is quantitative (statistics, ML math, probability, algorithms/complexity), use actual real numbers and show the computation step by step - not an abstract description. If it's not quantitative (OOP, SQL, system design, behavioral, LLM concepts), use a short concrete code snippet or a specific mini-scenario instead.
+3. formalism - Now introduce the precise technical definition, correct terminology, and (if relevant) the exact formula/notation or syntax - explicitly tying it back to the analogy and example you already gave, so the jargon lands on top of understanding instead of replacing it.
+4. connection - Explain where and why this shows up in real systems, real code, or real interviews - the bigger picture and why it's worth knowing.
+5. check - Ask exactly ONE specific conceptual question that requires the student to explain the idea back in their own words (a focused sub-question, not necessarily the full original bank question). Then wait.
+6. interview - Once they've answered the check question well (nailed_it or close), congratulate them specifically and ratchet up like a real interviewer: ask a progressively harder, realistic follow-up on this same concept (an edge case, a "what if", or a comparison to a related concept/approach). Keep escalating turn by turn, evaluating each answer, until they've shown solid command - then set readyForNextQuestion to true. If their check-stage answer was needs_work, stay at "check": gently correct the specific misunderstanding and invite another try - do not advance to "interview" on a shaky foundation.
+
+Exceptions to the sequence:
+- If the student jumps straight into attempting to answer the original question COLD (without asking to be taught first), don't force them through the staged sequence - just evaluate their attempt directly via conceptFeedback/englishFeedback as usual, and set teachingStage to "check" or "interview" depending on how strong it was (or leave it null if this was just a one-off answer with no ongoing teaching thread).
+- If the student explicitly asks to skip ahead ("just give me the definition", "I already know this, quiz me", "skip to the hard stuff"), respect that and jump directly to the stage they asked for.
+- A plain clarifying question or small talk doesn't advance the stage - answer it, then keep CURRENT_TEACHING_STAGE unchanged for teachingStage.
+
+tutorReply must be plain spoken text only, the way a person actually talks out loud: NO markdown (no asterisks, no **bold**, no numbered/bulleted lists, no headers). If you want to walk through a few points, say them as flowing sentences ("First... then... and finally...") not a list. Keep each turn focused - typically 3-6 sentences, a little longer only when walking through a numeric example. All structured coaching detail goes in the fields below, never crammed into tutorReply.
+
+Coach their spoken English only when they actually produced English content to react to (an attempt or a real follow-up question) - and keep it light-touch:
+- englishFeedback.strengths: 1-2 things they phrased well or clearly. Empty array if there's nothing to react to yet.
+- englishFeedback.improvements: at most 2 specific, actionable tips (grammar, word choice, sentence structure, filler words) - never a long red-pen list, that kills confidence rather than building it.
+- englishFeedback.modelPhrasing: rewrite THEIR idea (not the textbook answer) as one or two fluent, natural sentences a confident candidate would say out loud - so they hear what good phrasing of their OWN thought sounds like. Leave as an empty string if they didn't attempt to explain anything this turn.
+
+teachingStage: the stage this reply represents, from the sequence above - or null if this turn isn't part of a teaching sequence at all (e.g. pure small talk).
+wasGenuineAttempt: true only if this message was a real attempt at explaining/answering a technical question (a check/interview-stage answer, or a cold attempt) - never true for "explain it to me" or acknowledgments like "ok".
+conceptFeedback.status: "not_attempted" if they didn't try explaining anything this turn (e.g. you were mid-lecture at intuition/example/formalism/connection), "nailed_it" if their attempt correctly covered the key concepts, "close" if they had the right idea but missed something real, "needs_work" if there's a genuine misunderstanding.
+readyForNextQuestion: true once they've either nailed the concept through the check/interview stages, or (for a quick cold attempt with no teaching thread) engaged enough that moving on would feel natural.
+encouragement: one short, genuine, SPECIFIC sentence tied to something they actually did or said - never a generic "good job!".
+
+Never be condescending, never lecture at length, never make them feel bad for not knowing something. The entire point of this mode is to build the confidence to speak up in a real interview - protect that above all else, without lying to them about their answer.`;
+
+async function tutorRespond({ question, conversation, message, fillerStats, currentStage }) {
+  const transcript = (conversation || [])
+    .map((turn) => `${turn.role === 'tutor' ? 'Tutor' : 'Student'}: ${turn.text}`)
+    .join('\n') || '(this is the first message)';
+
+  const userPrompt = `QUESTION BEING STUDIED:
+${question.question}
+
+CATEGORY: ${question.category} | DIFFICULTY: ${question.difficulty}
+
+REFERENCE MATERIAL (not shown to the student):
+Expected answer: ${question.expectedAnswer || '(use your own expert knowledge as the reference standard)'}
+Key concepts: ${(question.keyConcepts || []).join('; ') || '(use your own expert judgment)'}
+Common mistakes to watch for: ${(question.commonMistakes || []).join('; ') || '(none provided)'}
+
+CONVERSATION SO FAR:
+${transcript}
+
+CURRENT_TEACHING_STAGE: ${currentStage || 'none'}
+
+STUDENT'S LATEST MESSAGE (transcribed from voice, may contain filler words/informal phrasing):
+"""
+${message || '(empty message)'}
+"""
+
+LOCAL TRANSCRIPT STATS FOR THE LATEST MESSAGE:
+Word count: ${fillerStats.wordCount}
+Filler word count: ${fillerStats.totalFillerWords}
+Filler rate: ${(fillerStats.fillerRate * 100).toFixed(1)}%
+
+Respond now, as the tutor's next turn in this conversation.`;
+
+  return callAI({ system: TUTOR_SYSTEM_PROMPT, prompt: userPrompt, schema: TutorSchema, jsonSchema: TutorJsonSchema });
+}
+
 module.exports = {
   evaluateAnswer,
+  tutorRespond,
   generateCoachSummary,
   evaluateCode,
   evaluateSql,

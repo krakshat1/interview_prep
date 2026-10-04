@@ -11,6 +11,14 @@ const path = require('path');
 
 const PYTHON_BIN = process.env.PYTHON_BIN || 'python';
 const TIMEOUT_MS = 8000;
+// Submitted code must never see the server's secrets (AI API keys etc.), so the
+// child process gets a minimal environment instead of inheriting process.env.
+const SANDBOX_ENV = {
+  PATH: process.env.PATH,
+  SystemRoot: process.env.SystemRoot,
+  PYTHONDONTWRITEBYTECODE: '1',
+  PYTHONIOENCODING: 'utf-8',
+};
 
 function buildHarness(userCode, functionName, testCases) {
   return `
@@ -45,7 +53,7 @@ function runPythonTests({ code, functionName, testCases }) {
   fs.writeFileSync(tmpFile, harness, 'utf-8');
 
   return new Promise((resolve) => {
-    execFile(PYTHON_BIN, [tmpFile], { timeout: TIMEOUT_MS, maxBuffer: 2 * 1024 * 1024 }, (error, stdout, stderr) => {
+    execFile(PYTHON_BIN, [tmpFile], { timeout: TIMEOUT_MS, maxBuffer: 2 * 1024 * 1024, cwd: os.tmpdir(), env: SANDBOX_ENV }, (error, stdout, stderr) => {
       fs.unlink(tmpFile, () => {});
       if (error) {
         if (error.killed) return resolve({ error: 'Execution timed out (possible infinite loop).', results: [] });

@@ -4,6 +4,7 @@ module.exports = {
   questions: require('./questions'),
   papers: require('./papers'),
   interview: require('./interview'),
+  study: require('./study'),
   reports: require('./reports'),
   profile: require('./profile'),
   roadmap: require('./roadmap'),
