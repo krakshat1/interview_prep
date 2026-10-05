@@ -33,6 +33,67 @@ resume text, job descriptions).
 5. Open http://localhost:3000 in **Chrome or Edge** (voice input needs the
    Web Speech API - the app falls back to typed answers elsewhere).
 
+## Installing on Linux
+
+Steps for Ubuntu/Debian; other distros need only the equivalent
+package names.
+
+1. **Install Node.js 18 or newer, Python 3 and git.** Python is needed for the
+   graded Code practice mode.
+   ```bash
+   sudo apt update
+   sudo apt install -y git python3 curl
+   curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+   sudo apt install -y nodejs
+   node -v    # should print v18 or higher
+   python3 --version
+   ```
+2. **Get the code and install dependencies.**
+   ```bash
+   git clone https://github.com/krakshat1/interview_prep.git
+   cd interview_prep
+   npm install
+   ```
+3. **Add your AI key.**
+   ```bash
+   cp .env.example .env
+   nano .env      # set AI_PROVIDER and the matching AI_API_KEY_* line
+   ```
+4. **Start it.**
+   ```bash
+   npm start
+   ```
+   Open http://localhost:3000 in Chrome or Edge. On Linux the app uses
+   `python3` automatically; set `PYTHON_BIN` in `.env` to use a different
+   interpreter.
+
+### Keep it running in the background (optional)
+
+```bash
+sudo npm install -g pm2
+pm2 start src/server.js --name interview-prep
+pm2 save && pm2 startup     # restart automatically after a reboot
+```
+
+### Run it with Docker instead (optional)
+
+No Node or Python install needed on the host:
+
+```bash
+docker build -t interview-prep .
+docker run -d -p 3000:3000 --env-file .env -v interview-prep-data:/data interview-prep
+```
+
+### Troubleshooting
+
+| Problem | Fix |
+| --- | --- |
+| `npm install` fails or syntax errors on start | Node is too old - check `node -v` and upgrade to 18+. |
+| Code practice says it cannot run Python | `sudo apt install python3`, or set `PYTHON_BIN` in `.env`. |
+| `EADDRINUSE` on start | Port 3000 is taken - set `PORT=3001` in `.env`. |
+| "No AI API key configured" | Fill in `.env` and restart `npm start`. |
+| Cannot reach it from another machine | Open the port (`sudo ufw allow 3000`) or put it behind a reverse proxy. |
+
 ## Using it
 
 New here, or not sure any of this will actually help you? Start at
