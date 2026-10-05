@@ -9,7 +9,7 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
-const PYTHON_BIN = process.env.PYTHON_BIN || 'python';
+const PYTHON_BIN = process.env.PYTHON_BIN || (process.platform === 'win32' ? 'python' : 'python3');
 const TIMEOUT_MS = 8000;
 // Submitted code must never see the server's secrets (AI API keys etc.), so the
 // child process gets a minimal environment instead of inheriting process.env.

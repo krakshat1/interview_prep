@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "Personal AI interview practice tool - voice-based mock interviews with LLM evaluation",
   "private": true,
+  "engines": { "node": ">=18" },
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
